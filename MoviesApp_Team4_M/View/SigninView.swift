@@ -32,7 +32,7 @@ struct SignInView: View {
                         .fontWeight(.bold)
                         .foregroundColor(.white)
 
-                    Text("You'll find what you're looking for in the ocean of movies")
+                    Text("You'll find what you're looking for in the \nocean of movies")
                         .font(.body)
                         .foregroundColor(.white.opacity(0.85))
                 }
@@ -71,9 +71,10 @@ struct SignInView: View {
                     } label: {
                         Text("Sign in")
                             .font(.headline)
+                            .foregroundColor(.white.opacity(0.85))
                             .frame(maxWidth: .infinity)
                             .padding()
-                            .background(Color(.systemGray6))
+                            .background(Color(.gray))
                             .foregroundColor(.primary)
                             .cornerRadius(14)
                     }
