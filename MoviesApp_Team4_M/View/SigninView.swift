@@ -4,6 +4,7 @@ struct SignInView: View {
 
     @State private var email = ""
     @State private var password = ""
+    let onSignedIn: () -> Void
 
     var body: some View {
         ZStack(alignment: .top) {
@@ -32,7 +33,7 @@ struct SignInView: View {
                         .fontWeight(.bold)
                         .foregroundColor(.white)
 
-                    Text("You'll find what you're looking for in the \nocean of movies")
+                    Text("You'll find what you're looking for in the ocean of movies")
                         .font(.body)
                         .foregroundColor(.white.opacity(0.85))
                 }
@@ -67,14 +68,14 @@ struct SignInView: View {
                     }
 
                     Button {
-                        print("Sign In tapped")
+                        // TODO: Validate credentials here if needed
+                        onSignedIn()
                     } label: {
                         Text("Sign in")
                             .font(.headline)
-                            .foregroundColor(.white.opacity(0.85))
                             .frame(maxWidth: .infinity)
                             .padding()
-                            .background(Color(.gray))
+                            .background(Color(.systemGray6))
                             .foregroundColor(.primary)
                             .cornerRadius(14)
                     }
@@ -90,6 +91,6 @@ struct SignInView: View {
 }
 
 #Preview {
-    SignInView()
+    SignInView(onSignedIn: {})
 }
 

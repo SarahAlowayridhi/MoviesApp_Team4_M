@@ -20,6 +20,7 @@ struct MovieDetails: View {
     @State private var scrollY: CGFloat = 0
     private let headerMax: CGFloat = 420
     private let headerMin: CGFloat = 120
+    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -114,7 +115,8 @@ struct MovieDetails: View {
         return VStack(spacing: 0) {
             HStack {
 
-                circleIcon(system: "chevron.left") { }
+                circleIcon(system: "chevron.left") { dismiss() }
+
 
                 Spacer()
 
