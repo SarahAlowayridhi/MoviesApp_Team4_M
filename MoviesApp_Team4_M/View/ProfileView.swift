@@ -5,18 +5,16 @@ struct ProfileView: View {
         
         NavigationStack {
             
-            VStack(alignment: .leading, spacing: 20) {
+            VStack(alignment: .leading, spacing: 24) {
                 
                 NavigationLink(destination: SignInView()) {
-                    HStack {
+                    HStack(spacing: 6) {
                         Image(systemName: "chevron.backward")
                             .foregroundColor(.yellow)
                         
                         Text("Back")
                             .font(.title3)
                             .foregroundColor(.yellow)
-                        
-                        Spacer()
                     }
                 }
                 
@@ -27,31 +25,30 @@ struct ProfileView: View {
                 ZStack {
                     
                     Rectangle()
-                        .fill(Color.gray.opacity(0.40))
+                        .fill(Color.gray.opacity(0.35))
                         .frame(height: 110)
-                        .cornerRadius(15)
+                        .cornerRadius(16)
                     
-                    HStack(spacing: 15) {
+                    HStack(spacing: 16) {
                         
-                        ZStack{
+                        ZStack {
                             Circle()
-                                  .fill(Color.gray.opacity(0.3))
-                                  .frame(width: 80, height: 80)
-
+                                .fill(Color.gray.opacity(0.3))
+                                .frame(width: 80, height: 80)
+                            
                             Image("profilephoto")
                                 .resizable()
                                 .scaledToFill()
                                 .frame(width: 65, height: 65)
                                 .clipShape(Circle())
-                            
                         }
                         
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Sarah Alowayridhi")
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Sarah Abdullah")
                                 .font(.headline)
                                 .fontWeight(.bold)
                             
-                            Text("sarah.alowayridhi@gmail.com")
+                            Text("Xxxx234@gmail.com")
                                 .font(.caption)
                                 .foregroundColor(.gray)
                         }
@@ -65,9 +62,26 @@ struct ProfileView: View {
                 }
                 
                 Text("Saved movies")
-                    .font(.title)
+                    .font(.title2)
                     .fontWeight(.semibold)
+                    .padding(.top, 8)
                 
+                Spacer()
+                
+                VStack(spacing: 12) {
+                    
+                    Image("movieisme logo")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 73.07, height: 43.66)
+                        .foregroundColor(.gray.opacity(0.6))
+                    
+                    Text("No saved movies yet, start save\nyour favourites")
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                        .multilineTextAlignment(.center)
+                }
+                .frame(maxWidth: .infinity)
                 
                 Spacer()
             }
