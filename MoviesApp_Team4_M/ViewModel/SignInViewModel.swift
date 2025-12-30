@@ -23,7 +23,7 @@ class SignInViewModel: ObservableObject {
 
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-   
+        print(APItoken.APItoken)
         URLSession.shared.dataTask(with: request) { data, response, error in
 
             guard let data = data else { return }
