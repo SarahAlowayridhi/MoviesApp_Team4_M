@@ -4,7 +4,6 @@
 //
 //  Created by Ruba Alghamdi on 05/07/1447 AH.
 //
-
 import Foundation
 
 struct Movie: Codable {
