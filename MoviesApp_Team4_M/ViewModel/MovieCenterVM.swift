@@ -12,10 +12,7 @@ class MovieCenterVM: ObservableObject {
     @Published var actors: Actors?
     @Published var directors: Directors?
     
-    //fdfdfdfd///fdfdf
-    
-    ////fdfdfdfd/d/
-    ///////fdfdfdfdfdfd
+   
     func fetchMovies() async throws -> Movie {
         let endpoint = "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
         guard let url = URL(string: endpoint) else {
