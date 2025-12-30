@@ -1,7 +1,9 @@
 import SwiftUI
 
 struct ProfileInfoView: View {
+    
     @Environment(\.dismiss) private var dismiss
+    @State private var goToEdit = false
 
     var body: some View {
         VStack(spacing: 24) {
@@ -27,7 +29,7 @@ struct ProfileInfoView: View {
                 Spacer()
 
                 Button {
-                    // later: edit action
+                    goToEdit = true
                 } label: {
                     Text("Edit")
                         .foregroundColor(.yellow)
@@ -58,8 +60,9 @@ struct ProfileInfoView: View {
 
                     Spacer()
 
-                    Text("Sarah")
+                    Text("\tSarah")
                         .foregroundColor(.white)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .padding()
 
@@ -71,8 +74,9 @@ struct ProfileInfoView: View {
 
                     Spacer()
 
-                    Text("Abdullah")
+                    Text("\tAbdullah")
                         .foregroundColor(.white)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .padding()
             }
@@ -96,6 +100,10 @@ struct ProfileInfoView: View {
             }
             .padding(.horizontal)
             .padding(.bottom)
+            
+            .navigationDestination(isPresented: $goToEdit) {
+                ProfileEditView()
+            }
         }
         .padding(.top, 8)
         .background(Color.black.ignoresSafeArea())
@@ -108,3 +116,4 @@ struct ProfileInfoView: View {
         ProfileInfoView()
     }
 }
+

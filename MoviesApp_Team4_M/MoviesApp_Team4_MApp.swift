@@ -9,8 +9,15 @@ import SwiftUI
 @main
 struct MoviesApp_Team4_MApp: App {
     var body: some Scene {
+        
+        @AppStorage("isLoggedIn") var isLoggedIn = false
+
         WindowGroup {
-            RootView()
+            if isLoggedIn {
+                MoviesCenter()
+            } else {
+                SignInView()
+            }
         }
     }
 }
