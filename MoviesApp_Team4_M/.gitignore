@@ -1,0 +1,11 @@
+# Secrets
+APItoken.swift
+secret.swift
+Secrets.swift
+
+# Xcode user files
+*.xcuserstate
+xcuserdata/
+
+# macOS
+.DS_Store

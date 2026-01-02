@@ -13,7 +13,7 @@ struct Movie: Codable {
     let language: [String] // array
     let poster: String
     let story: String
-    let rating: Double
+    let rating: String? 
     let IMDb_rating: Double
     let runtime: String
 }

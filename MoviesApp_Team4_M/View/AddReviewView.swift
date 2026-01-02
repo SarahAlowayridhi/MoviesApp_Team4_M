@@ -94,7 +94,8 @@ struct AddReviewView: View {
             }
             
             Spacer()
-        }
+                
+        }.padding()
     }
 }
 
