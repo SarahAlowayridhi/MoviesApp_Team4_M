@@ -9,7 +9,7 @@ import SwiftUI
 
 struct FakeMovieCenter: View {
 
-    private let testMovieId = "recRbTqxkRzNAYmOE"
+    private let testMovieId = "recfNj1e4waOUJLxd"
 
     var body: some View {
         NavigationStack {

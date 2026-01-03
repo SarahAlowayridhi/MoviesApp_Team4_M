@@ -6,35 +6,24 @@
 //
 import Foundation
 
-struct Movie: Codable {
-    let name: String
-    let createdTime: String
-    let genre: [String] // array
-    let language: [String] // array
-    let poster: String
-    let story: String
-    let rating: String? 
-    let IMDb_rating: Double
-    let runtime: String
-}
-    
-struct Actors: Codable {
-        var id = UUID()
-        let name: String
-        let image: String //link 
-    }
-    
-struct Directors: Codable {
-        var id = UUID()
-        let name: String
-        let image: String //link
-    }
+struct Actors: Codable, Identifiable {
+    let name: String?
+    let image: String?
 
-struct Review: Identifiable {
-    var id = UUID()
-    var user_id = UUID()
-    let rate: Double
-    let review_text: String
-    
-   
+    // This is “good enough” for UI lists, but record-id is better if you later store it.
+    var id: String { name ?? UUID().uuidString }
+}
+
+struct Directors: Codable {
+    let name: String?
+    let image: String?
+}
+
+struct Review: Codable, Identifiable {
+    let rate: Double?
+    let review_text: String?
+    let movie_id: String?
+    let user_id: String?
+
+    var id: String { movie_id ?? UUID().uuidString }
 }

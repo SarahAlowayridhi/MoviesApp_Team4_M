@@ -10,9 +10,33 @@
 		6D9F9A902EFA83930071E348 /* MoviesApp_Team4_M.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MoviesApp_Team4_M.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		97F98C092F082C8200871B20 /* Exceptions for "MoviesApp_Team4_M" folder in "MoviesApp_Team4_M" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				.gitignore,
+			);
+			target = 6D9F9A8F2EFA83930071E348 /* MoviesApp_Team4_M */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
+		97F98C0A2F082C8200871B20 /* Exceptions for "MoviesApp_Team4_M" folder in "Compile Sources" phase from "MoviesApp_Team4_M" target */ = {
+			isa = PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet;
+			buildPhase = 6D9F9A8C2EFA83930071E348 /* Sources */;
+			membershipExceptions = (
+				.gitignore,
+			);
+		};
+/* End PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		6D9F9A922EFA83930071E348 /* MoviesApp_Team4_M */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				97F98C092F082C8200871B20 /* Exceptions for "MoviesApp_Team4_M" folder in "MoviesApp_Team4_M" target */,
+				97F98C0A2F082C8200871B20 /* Exceptions for "MoviesApp_Team4_M" folder in "Compile Sources" phase from "MoviesApp_Team4_M" target */,
+			);
 			path = MoviesApp_Team4_M;
 			sourceTree = "<group>";
 		};
