@@ -10,7 +10,6 @@ struct Actors: Codable, Identifiable {
     let name: String?
     let image: String?
 
-    // This is “good enough” for UI lists, but record-id is better if you later store it.
     var id: String { name ?? UUID().uuidString }
 }
 

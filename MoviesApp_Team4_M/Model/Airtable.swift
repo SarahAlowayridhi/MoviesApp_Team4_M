@@ -13,6 +13,10 @@ enum Airtable {
     static let actorsTable = "actors"
     static let directorsTable = "directors"
     static let reviewsTable = "reviews"
+    
+    static let movieDirectorsTable = "movie_directors"
+    static let movieActorsTable = "movie_actors"
+
 
     private static var token: String {
         let raw = APItoken.APItoken.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -88,6 +92,25 @@ enum Airtable {
         let encodedTable = table.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? table
         return try await get("\(encodedTable)/\(recordId)")
     }
+    static func listRecords<T: Decodable>(
+        table: String,
+        filterByFormula: String,
+        maxRecords: Int? = nil
+    ) async throws -> [AirtableRecord<T>] {
+
+        let encodedTable = table.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? table
+
+        var items: [URLQueryItem] = [
+            URLQueryItem(name: "filterByFormula", value: filterByFormula)
+        ]
+        if let maxRecords {
+            items.append(URLQueryItem(name: "maxRecords", value: String(maxRecords)))
+        }
+
+        let response: AirtableListResponse<T> = try await get("\(encodedTable)", queryItems: items)
+        return response.records
+    }
+
 }
 
 extension Airtable {
@@ -170,4 +193,53 @@ struct Movie: Codable {
 
     let actors: [String]?
     let director: [String]?
+}
+
+struct MovieDirectorLinkFields: Codable {
+    let movie_id: AirtableIDList?
+    let director_id: AirtableIDList?
+}
+
+struct MovieActorLinkFields: Codable {
+    let movie_id: AirtableIDList?
+    let actor_id: AirtableIDList?
+}
+
+
+enum AirtableIDList: Codable {
+    case one(String)
+    case many([String])
+
+    var first: String? {
+        switch self {
+        case .one(let s): return s
+        case .many(let arr): return arr.first
+        }
+    }
+
+    var all: [String] {
+        switch self {
+        case .one(let s): return [s]
+        case .many(let arr): return arr
+        }
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.singleValueContainer()
+        if let arr = try? c.decode([String].self) {
+            self = .many(arr)
+        } else if let s = try? c.decode(String.self) {
+            self = .one(s)
+        } else {
+            self = .many([])
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.singleValueContainer()
+        switch self {
+        case .one(let s): try c.encode(s)
+        case .many(let arr): try c.encode(arr)
+        }
+    }
 }

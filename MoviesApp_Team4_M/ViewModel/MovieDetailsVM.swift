@@ -67,29 +67,102 @@ final class MovieDetailsVM: ObservableObject {
     }
 
     private func fetchDirector() async {
-        guard let directorId = movieFields?.director?.first else {
+
+        // if movieFields has director IDs
+        if let directId = movieFields?.director?.first {
+            do {
+                let rec: AirtableRecord<Directors> = try await Airtable.fetchById(
+                    table: Airtable.directorsTable,
+                    recordId: directId
+                )
+                director = rec.fields
+                return
+            } catch {
+                print("fetchDirector direct link failed:", error)
+            }
+        }
+
+        // join table
+        guard let movieRecordId = self.recordId else {
             director = nil
             return
         }
 
+                let formula = #"movie_id="\#(movieRecordId)""#
+
         do {
+            let links: [AirtableRecord<MovieDirectorLinkFields>] = try await Airtable.listRecords(
+                table: Airtable.movieDirectorsTable,
+                filterByFormula: formula,
+                maxRecords: 10
+            )
+
+            let directorId = links
+                .compactMap { $0.fields.director_id?.first }
+                .first
+
+            guard let directorId else {
+                print("No director_id found in movie_directors for movie:", movieRecordId)
+                director = nil
+                return
+            }
+
             let rec: AirtableRecord<Directors> = try await Airtable.fetchById(
                 table: Airtable.directorsTable,
                 recordId: directorId
             )
             director = rec.fields
+
+            print("Director loaded:", director?.name ?? "-")
+
         } catch {
+            print("fetchDirector join failed:", error)
             director = nil
         }
     }
 
+
     private func fetchActors() async {
-        let ids = movieFields?.actors ?? []
-        guard !ids.isEmpty else {
+
+        // if movieFields has actors IDs
+        let directIds = movieFields?.actors ?? []
+        if !directIds.isEmpty {
+            await fetchActorsByIds(directIds)
+            return
+        }
+
+        // B) join table
+        guard let movieRecordId = self.recordId else {
             actors = []
             return
         }
 
+        let formula = #"movie_id="\#(movieRecordId)""#
+
+        do {
+            let links: [AirtableRecord<MovieActorLinkFields>] = try await Airtable.listRecords(
+                table: Airtable.movieActorsTable,
+                filterByFormula: formula,
+                maxRecords: 50
+            )
+
+            let actorIds = links.compactMap { $0.fields.actor_id?.first }
+            guard !actorIds.isEmpty else {
+                print("No actor_id found in movie_actors for movie:", movieRecordId)
+                actors = []
+                return
+            }
+
+            await fetchActorsByIds(actorIds)
+
+            print("Actors loaded:", actors.map { $0.name ?? "-" })
+
+        } catch {
+            print("fetchActors join failed:", error)
+            actors = []
+        }
+    }
+    private func fetchActorsByIds(_ ids: [String]) async {
         var result: [Actors] = []
         result.reserveCapacity(ids.count)
 
@@ -103,6 +176,7 @@ final class MovieDetailsVM: ObservableObject {
                         )
                         return rec.fields
                     } catch {
+                        print("fetch actor by id failed:", id, error)
                         return nil
                     }
                 }
@@ -115,6 +189,7 @@ final class MovieDetailsVM: ObservableObject {
 
         actors = result
     }
+
 
     private func fetchReviews() async {
         guard let movieRecordId = self.recordId else {
