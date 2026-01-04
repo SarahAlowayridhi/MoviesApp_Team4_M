@@ -13,6 +13,7 @@ class SignInViewModel: ObservableObject {
 
     //  نخزن المستخدمين
     @Published var users: [UserRecord] = []
+    @Published var currentUser: UserRecord?
 
     //  نجيب المستخدمين من API
     func getUsers() {
@@ -23,7 +24,9 @@ class SignInViewModel: ObservableObject {
 
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        print(APItoken.APItoken)
+        
+        request.setValue(APItoken.APItoken , forHTTPHeaderField: "Authorization")
+        
         URLSession.shared.dataTask(with: request) { data, response, error in
 
             guard let data = data else { return }
@@ -40,11 +43,26 @@ class SignInViewModel: ObservableObject {
     //  التحقق من تسجيل الدخول
     func signIn(email: String, password: String) -> Bool {
 
-        let user = users.first { record in
-            record.fields.email == email &&
-            record.fields.password == password
+        if let user = users.first(where: { record in
+
+            guard
+                let userEmail = record.fields.email,
+                let userPassword = record.fields.password
+            else {
+                return false // تجاهل المستخدم الناقص
+            }
+
+            return userEmail == email && userPassword == password
+        }) {
+
+            currentUser = user
+            UserDefaults.standard.set(user.id, forKey: "userId")
+            return true
         }
 
-        return user != nil
+        return false
     }
+
 }
+
+

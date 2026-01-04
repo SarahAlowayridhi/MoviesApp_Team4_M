@@ -7,18 +7,21 @@
 
 import Foundation
 
-struct UsersResponse: Decodable {
+struct UsersResponse: Codable {
     let records: [UserRecord]
 }
 
-struct UserRecord: Decodable { //عندنا مجموعة من المستخدمين
+struct UserRecord: Codable { //عندنا مجموعة من المستخدمين
     let id: String
     let fields: User
 }
 
-struct User: Decodable {
-    let email: String
-    let password: String
+struct User: Codable {
+    let email: String?
+    let password: String?
+    let name: String
+    let profile_image: String?
+
 }
 
 
