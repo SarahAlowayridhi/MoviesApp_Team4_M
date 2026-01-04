@@ -6,10 +6,25 @@
 //
 
 import SwiftUI
+import UIKit
+
+// MARK: - Shared
 
 extension Color {
     static let iconColor = Color(red: 243/255, green: 204/255, blue: 79/255)
 }
+
+struct ShareSheet: UIViewControllerRepresentable {
+    let items: [Any]
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: items, applicationActivities: nil)
+    }
+
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) { }
+}
+
+// MARK: - View
 
 struct MovieDetails: View {
     let recordId: String
@@ -42,27 +57,19 @@ struct MovieDetails: View {
 
             VStack(alignment: .leading, spacing: 18) {
 
-                if vm.isLoading {
-                    ProgressView().padding(.top, 20)
-                }
-
-                if let errorMessage = vm.errorMessage {
-                    Text("Error: \(errorMessage)")
-                        .foregroundStyle(.red)
-                        .font(.footnote)
-                }
+                statusArea
 
                 Text(vm.titleText)
                     .font(.system(size: 32, weight: .bold))
                     .opacity(1 - topBarAlpha)
 
-                infoGrid
-                storySection
-                imdbSection
-                divider
+                // merged: info + story + imdb (+ divider)
+                detailsBlock
 
-                directorSection
-                starsSection
+                // merged: director + stars
+                peopleBlock
+
+                // reviews stays as one block
                 reviewsSection
 
                 writeReviewButton
@@ -81,7 +88,13 @@ struct MovieDetails: View {
         .preferredColorScheme(.dark)
         .toolbar(.hidden, for: .navigationBar)
         .task(id: recordId) { await vm.load(recordId: recordId) }
+        .sheet(isPresented: $vm.isShareSheetPresented) {
+            ShareSheet(items: vm.shareItems)
+                .presentationDetents([.medium, .large])
+        }
     }
+
+    // MARK: - Derived
 
     private var topBarAlpha: CGFloat {
         let offset = -scrollY
@@ -89,6 +102,8 @@ struct MovieDetails: View {
         let end: CGFloat = 220
         return min(max((offset - start) / (end - start), 0), 1)
     }
+
+    // MARK: - Header + TopBar
 
     private var header: some View {
         let offset = -scrollY
@@ -133,8 +148,31 @@ struct MovieDetails: View {
 
                 Spacer()
 
-                circleIcon(system: "square.and.arrow.up") { }
-                circleIcon(system: "bookmark") { }
+                circleIcon(system: "square.and.arrow.up") {
+                    vm.prepareShare(recordId: recordId)
+                }
+
+                circleIcon(system: vm.isSaved ? "bookmark.fill" : "bookmark") {
+                    let userId = UserDefaults.standard.string(forKey: "user_id") ?? ""
+                    guard !userId.isEmpty else {
+                        vm.errorMessage = "No user is signed in."
+                        return
+                    }
+                    Task {
+                        await vm.saveMovieToSaved(userId: userId, movieRecordId: recordId)
+                    }
+                }
+                .opacity(vm.isSaving ? 0.6 : 1)
+                .disabled(vm.isSaving)
+                .task(id: recordId) {
+                    // keeping identical behavior (you had a second load here)
+                    await vm.load(recordId: recordId)
+
+                    let userId = UserDefaults.standard.string(forKey: "user_id") ?? ""
+                    if !userId.isEmpty {
+                        vm.loadSavedLocalState(userId: userId, movieRecordId: recordId)
+                    }
+                }
             }
             .padding(.horizontal, 16)
             .padding(.top, 40)
@@ -164,120 +202,102 @@ struct MovieDetails: View {
         .padding(.vertical, 4)
     }
 
-    private var infoGrid: some View {
-        LazyVGrid(columns: infoColumns, spacing: 18) {
-            infoItem(title: "Duration", value: vm.runtimeText)
-            infoItem(title: "Language", value: vm.languageText)
-            infoItem(title: "Genre", value: vm.genreText)
-        }
-        .padding(.top, 8)
-    }
+    // MARK: - Merged Blocks
 
-    private func infoItem(title: String, value: String) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(title).font(.system(size: 14, weight: .semibold))
-            Text(value)
-                .font(.system(size: 13))
-                .foregroundStyle(.opacity(0.6))
-        }
-    }
-
-    private var storySection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Story").font(.system(size: 18, weight: .bold))
-            Text(vm.storyText)
-                .font(.system(size: 14))
-                .foregroundStyle(.opacity(0.55))
-                .lineSpacing(4)
-        }
-        .padding(.top, 6)
-    }
-
-    private var imdbSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("IMDb Rating").font(.system(size: 18, weight: .bold))
-            Text(vm.imdbText)
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(.opacity(0.7))
-        }
-        .padding(.top, 6)
-    }
-
-    private var divider: some View {
-        Rectangle()
-            .fill(.opacity(0.15))
-            .frame(height: 1)
-            .padding(.vertical, 14)
-    }
-
-    private var directorSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Director").font(.system(size: 18, weight: .bold))
-
-            VStack(spacing: 12) {
-                directorImage
-                Text(vm.directorNameText)
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(.opacity(0.75))
-            }
-        }
-    }
-
-    private var directorImage: some View {
+    private var statusArea: some View {
         Group {
-            if let url = vm.directorImageURL {
-                AsyncImage(url: url) { phase in
-                    switch phase {
-                    case .success(let image): image.resizable().scaledToFill()
-                    default: Image("Image").resizable().scaledToFill()
-                    }
-                }
-            } else {
-                Image("Image").resizable().scaledToFill()
+            if vm.isLoading {
+                ProgressView()
+                    .padding(.top, 20)
+            }
+
+            if let errorMessage = vm.errorMessage {
+                Text("Error: \(errorMessage)")
+                    .foregroundStyle(.red)
+                    .font(.footnote)
             }
         }
-        .frame(width: 76, height: 76)
-        .clipShape(Circle())
     }
 
-    private var starsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Stars").font(.system(size: 18, weight: .bold))
+    /// Info grid + Story + IMDb + divider (all in one “Details” block)
+    private var detailsBlock: some View {
+        VStack(alignment: .leading, spacing: 18) {
 
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 14) {
-                    ForEach(vm.actors) { actor in
-                        VStack(spacing: 8) {
-                            actorImage(actor)
-                            Text(actor.name ?? "-")
-                                .font(.system(size: 12, weight: .semibold))
-                                .lineLimit(1)
-                                .frame(width: 100)
+            LazyVGrid(columns: infoColumns, spacing: 18) {
+                infoItem(title: "Duration", value: vm.runtimeText)
+                infoItem(title: "Language", value: vm.languageText)
+                infoItem(title: "Genre", value: vm.genreText)
+            }
+            .padding(.top, 8)
+
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Story")
+                    .font(.system(size: 18, weight: .bold))
+
+                Text(vm.storyText)
+                    .font(.system(size: 14))
+                    .foregroundStyle(.opacity(0.55))
+                    .lineSpacing(4)
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("IMDb Rating")
+                    .font(.system(size: 18, weight: .bold))
+
+                Text(vm.imdbText)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(.opacity(0.7))
+            }
+
+            Rectangle()
+                .fill(.opacity(0.15))
+                .frame(height: 1)
+                .padding(.top, 6)
+        }
+    }
+
+    /// Director + Stars (one “People” block)
+    private var peopleBlock: some View {
+        VStack(alignment: .leading, spacing: 18) {
+
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Director")
+                    .font(.system(size: 18, weight: .bold))
+
+                VStack(spacing: 12) {
+                    directorImage
+
+                    Text(vm.directorNameText)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(.opacity(0.75))
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Stars")
+                    .font(.system(size: 18, weight: .bold))
+
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 14) {
+                        ForEach(vm.actors) { actor in
+                            VStack(spacing: 8) {
+                                actorImage(actor)
+
+                                Text(actor.name ?? "-")
+                                    .font(.system(size: 12, weight: .semibold))
+                                    .lineLimit(1)
+                                    .frame(width: 100)
+                            }
                         }
                     }
+                    .padding(.horizontal, 2)
                 }
-                .padding(.horizontal, 2)
             }
         }
         .padding(.top, 6)
     }
 
-    private func actorImage(_ actor: Actors) -> some View {
-        Group {
-            if let url = vm.actorImageURL(actor) {
-                AsyncImage(url: url) { phase in
-                    switch phase {
-                    case .success(let image): image.resizable().scaledToFill()
-                    default: Image("Image").resizable().scaledToFill()
-                    }
-                }
-            } else {
-                Image("Image").resizable().scaledToFill()
-            }
-        }
-        .frame(width: 76, height: 76)
-        .clipShape(Circle())
-    }
+    // MARK: - Reviews
 
     private var reviewsSection: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -303,6 +323,57 @@ struct MovieDetails: View {
             }
         }
         .padding(.top, 8)
+    }
+
+    // MARK: - Small Helpers
+
+    private func infoItem(title: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title)
+                .font(.system(size: 14, weight: .semibold))
+
+            Text(value)
+                .font(.system(size: 13))
+                .foregroundStyle(.opacity(0.6))
+        }
+    }
+
+    private var directorImage: some View {
+        Group {
+            if let url = vm.directorImageURL {
+                AsyncImage(url: url) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image.resizable().scaledToFill()
+                    default:
+                        Image("Image").resizable().scaledToFill()
+                    }
+                }
+            } else {
+                Image("Image").resizable().scaledToFill()
+            }
+        }
+        .frame(width: 76, height: 76)
+        .clipShape(Circle())
+    }
+
+    private func actorImage(_ actor: Actors) -> some View {
+        Group {
+            if let url = vm.actorImageURL(actor) {
+                AsyncImage(url: url) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image.resizable().scaledToFill()
+                    default:
+                        Image("Image").resizable().scaledToFill()
+                    }
+                }
+            } else {
+                Image("Image").resizable().scaledToFill()
+            }
+        }
+        .frame(width: 76, height: 76)
+        .clipShape(Circle())
     }
 
     private func reviewCard(_ review: ReviewUI) -> some View {
@@ -385,6 +456,8 @@ struct MovieDetails: View {
         }
     }
 }
+
+// MARK: - Review UI Model
 
 struct ReviewUI: Identifiable {
     let id: String

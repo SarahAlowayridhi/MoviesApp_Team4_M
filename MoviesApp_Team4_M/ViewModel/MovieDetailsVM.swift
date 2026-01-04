@@ -4,22 +4,36 @@
 //
 //  Created by Ruba Alghamdi on 13/07/1447 AH.
 //
+
 import Foundation
 import Combine
-import Foundation
 
 @MainActor
 final class MovieDetailsVM: ObservableObject {
 
+    // MARK: - View State
+
     @Published var isLoading = false
     @Published var errorMessage: String?
-    @Published var movieFields: MovieFields?
+
+    @Published var movieFields: AirtableMovieFields?
     @Published var recordId: String?
 
     @Published var actors: [Actors] = []
     @Published var director: Directors?
-    @Published var reviews: [AirtableRecord<ReviewFields>] = []
+    @Published var reviews: [AirtableRecord<AirtableReviewFields>] = []
     @Published var averageAppRatingText: String = "0.0"
+
+    // Save state
+    @Published var isSaving = false
+    @Published var saveErrorMessage: String?
+    @Published var isSaved = false
+
+    // Share Sheet
+    @Published var isShareSheetPresented = false
+    @Published var shareItems: [Any] = []
+
+    // MARK: - UI Text Helpers
 
     var titleText: String { movieFields?.name ?? "Loading..." }
     var runtimeText: String { movieFields?.runtime ?? "-" }
@@ -44,9 +58,7 @@ final class MovieDetailsVM: ObservableObject {
         }
     }
 
-    func actorImageURL(_ actor: Actors) -> URL? {
-        URL(string: actor.image ?? "")
-    }
+    // MARK: - Public Actions
 
     func load(recordId: String) async {
         isLoading = true
@@ -66,29 +78,89 @@ final class MovieDetailsVM: ObservableObject {
         }
     }
 
-    private func fetchDirector() async {
+    func actorImageURL(_ actor: Actors) -> URL? {
+        URL(string: actor.image ?? "")
+    }
 
-        // if movieFields has director IDs
-        if let directId = movieFields?.director?.first {
+    func prepareShare(recordId: String) {
+        let title = titleText.isEmpty ? "Movie" : titleText
+        let deepLink = URL(string: "moviesapp://movie/\(recordId)")!
+        let message = "Check out \(title)"
+
+        shareItems = [message, deepLink]
+        isShareSheetPresented = true
+    }
+
+    func saveMovieToSaved(userId: String, movieRecordId: String) async {
+        guard !isSaved else { return }
+
+        isSaving = true
+        saveErrorMessage = nil
+        defer { isSaving = false }
+
+        do {
+            let fields = Airtable.SavedMovieCreateFields(
+                user_id: userId,
+                movie_id: [movieRecordId]
+            )
+            try await Airtable.createSavedMovie(fields: fields)
+
+            isSaved = true
+            setSavedLocal(userId: userId, movieRecordId: movieRecordId, saved: true)
+        } catch {
+            saveErrorMessage = error.localizedDescription
+        }
+    }
+
+    // MARK: - Local Saved State (UserDefaults)
+
+    func loadSavedLocalState(userId: String, movieRecordId: String) {
+        let key = savedKey(for: userId)
+        let savedSet = Set(UserDefaults.standard.stringArray(forKey: key) ?? [])
+        isSaved = savedSet.contains(movieRecordId)
+    }
+
+    private func savedKey(for userId: String) -> String {
+        "saved_movies_local_\(userId)"
+    }
+
+    private func setSavedLocal(userId: String, movieRecordId: String, saved: Bool) {
+        let key = savedKey(for: userId)
+
+        var set = Set(UserDefaults.standard.stringArray(forKey: key) ?? [])
+        if saved {
+            set.insert(movieRecordId)
+        } else {
+            set.remove(movieRecordId)
+        }
+
+        UserDefaults.standard.set(Array(set), forKey: key)
+    }
+
+    // MARK: - Fetching (Airtable)
+
+    private func fetchDirector() async {
+        // A) Direct director id inside movieFields
+        if let directorId = movieFields?.director?.first {
             do {
                 let rec: AirtableRecord<Directors> = try await Airtable.fetchById(
                     table: Airtable.directorsTable,
-                    recordId: directId
+                    recordId: directorId
                 )
                 director = rec.fields
                 return
             } catch {
-                print("fetchDirector direct link failed:", error)
+                print("fetchDirector (direct) failed:", error)
             }
         }
 
-        // join table
+        // B) Join table fallback: movie_directors
         guard let movieRecordId = self.recordId else {
             director = nil
             return
         }
 
-                let formula = #"movie_id="\#(movieRecordId)""#
+        let formula = #"movie_id="\#(movieRecordId)""#
 
         do {
             let links: [AirtableRecord<MovieDirectorLinkFields>] = try await Airtable.listRecords(
@@ -97,11 +169,9 @@ final class MovieDetailsVM: ObservableObject {
                 maxRecords: 10
             )
 
-            let directorId = links
-                .compactMap { $0.fields.director_id?.first }
-                .first
-
-            guard let directorId else {
+            guard
+                let directorId = links.compactMap({ $0.fields.director_id?.first }).first
+            else {
                 print("No director_id found in movie_directors for movie:", movieRecordId)
                 director = nil
                 return
@@ -114,24 +184,21 @@ final class MovieDetailsVM: ObservableObject {
             director = rec.fields
 
             print("Director loaded:", director?.name ?? "-")
-
         } catch {
-            print("fetchDirector join failed:", error)
+            print("fetchDirector (join) failed:", error)
             director = nil
         }
     }
 
-
     private func fetchActors() async {
-
-        // if movieFields has actors IDs
-        let directIds = movieFields?.actors ?? []
-        if !directIds.isEmpty {
-            await fetchActorsByIds(directIds)
+        // A) Direct actor ids inside movieFields
+        let directActorIds = movieFields?.actors ?? []
+        if !directActorIds.isEmpty {
+            await fetchActorsByIds(directActorIds)
             return
         }
 
-        // B) join table
+        // B) Join table fallback: movie_actors
         guard let movieRecordId = self.recordId else {
             actors = []
             return
@@ -154,15 +221,15 @@ final class MovieDetailsVM: ObservableObject {
             }
 
             await fetchActorsByIds(actorIds)
-
             print("Actors loaded:", actors.map { $0.name ?? "-" })
-
         } catch {
-            print("fetchActors join failed:", error)
+            print("fetchActors (join) failed:", error)
             actors = []
         }
     }
-    private func fetchActorsByIds(_ ids: [String]) async {
+
+    // Make this method explicitly nonisolated so decoding and networking happen off the main actor.
+    nonisolated private func fetchActorsByIds(_ ids: [String]) async {
         var result: [Actors] = []
         result.reserveCapacity(ids.count)
 
@@ -187,9 +254,11 @@ final class MovieDetailsVM: ObservableObject {
             }
         }
 
-        actors = result
+        // hop back to main actor to update @Published state
+        await MainActor.run {
+            self.actors = result
+        }
     }
-
 
     private func fetchReviews() async {
         guard let movieRecordId = self.recordId else {
@@ -213,3 +282,4 @@ final class MovieDetailsVM: ObservableObject {
         }
     }
 }
+
