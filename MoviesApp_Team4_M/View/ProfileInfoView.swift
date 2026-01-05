@@ -3,8 +3,11 @@ import SwiftUI
 struct ProfileInfoView: View {
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.presentationMode) private var presentationMode
+
     @State private var goToEdit = false
     @StateObject private var viewModel = ProfileViewModel()
+
     @AppStorage("isLoggedIn") private var isLoggedIn = true
 
     let user: UserRecord?
@@ -13,7 +16,7 @@ struct ProfileInfoView: View {
 
         VStack(spacing: 24) {
 
-            // Header
+            // MARK: - Header
             HStack {
                 Button {
                     dismiss()
@@ -45,7 +48,7 @@ struct ProfileInfoView: View {
 
             Divider()
 
-            // Profile image
+            // MARK: - Profile image
             ZStack {
                 Circle()
                     .fill(Color.gray.opacity(0.3))
@@ -55,11 +58,10 @@ struct ProfileInfoView: View {
                     imageUrl: user?.fields.profile_image,
                     size: 65
                 )
-
             }
             .padding(.top, 8)
 
-            // Info card
+            // MARK: - Info card
             VStack(spacing: 0) {
 
                 HStack {
@@ -94,10 +96,9 @@ struct ProfileInfoView: View {
 
             Spacer()
 
-            // Sign out
             Button {
-                isLoggedIn = false
                 UserDefaults.standard.removeObject(forKey: "userId")
+                isLoggedIn = false
             } label: {
                 Text("Sign Out")
                     .foregroundColor(.red)
@@ -106,6 +107,8 @@ struct ProfileInfoView: View {
                     .background(Color.gray.opacity(0.35))
                     .cornerRadius(16)
             }
+
+
             .padding(.horizontal)
             .padding(.bottom)
 
@@ -124,7 +127,4 @@ struct ProfileInfoView: View {
         ProfileInfoView(user: nil)
     }
 }
-
-
-
 

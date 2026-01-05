@@ -5,6 +5,7 @@
 //  Created by Ruba Alghamdi on 13/07/1447 AH.
 //
 
+
 import SwiftUI
 import UIKit
 
@@ -63,13 +64,8 @@ struct MovieDetails: View {
                     .font(.system(size: 32, weight: .bold))
                     .opacity(1 - topBarAlpha)
 
-                // merged: info + story + imdb (+ divider)
                 detailsBlock
-
-                // merged: director + stars
                 peopleBlock
-
-                // reviews stays as one block
                 reviewsSection
 
                 writeReviewButton
@@ -89,8 +85,10 @@ struct MovieDetails: View {
         .toolbar(.hidden, for: .navigationBar)
 
         // ⭐️ sara change:
-        // نخلي تحميل الداتا (الفيلم/الممثلين/المخرج/الريفيو) هنا فقط مرة وحدة
-        .task(id: recordId) { await vm.load(recordId: recordId) }
+        // vm.load مسؤول عن كل شيء (ومنها isSaved)
+        .task(id: recordId) {
+            await vm.load(recordId: recordId)
+        }
 
         .sheet(isPresented: $vm.isShareSheetPresented) {
             ShareSheet(items: vm.shareItems)
@@ -157,27 +155,20 @@ struct MovieDetails: View {
                 }
 
                 circleIcon(system: vm.isSaved ? "bookmark.fill" : "bookmark") {
-                    // ⭐️ sara change: توحيد مفتاح userId (بدال user_id)
                     let userId = UserDefaults.standard.string(forKey: "userId") ?? ""
                     guard !userId.isEmpty else {
-                        vm.errorMessage = "No user is signed in."
+                        vm.errorMessage = "You must be signed in."
                         return
                     }
                     Task {
-                        await vm.saveMovieToSaved(userId: userId, movieRecordId: recordId)
+                        await vm.saveMovieToSaved(
+                            userId: userId,
+                            movieRecordId: recordId
+                        )
                     }
                 }
                 .opacity(vm.isSaving ? 0.6 : 1)
                 .disabled(vm.isSaving)
-
-                // ⭐️ sara change:
-                // هذي .task فقط لتحميل حالة الحفظ المحلية (بدون إعادة vm.load)
-                .task(id: recordId) {
-                    let userId = UserDefaults.standard.string(forKey: "userId") ?? ""
-                    if !userId.isEmpty {
-                        vm.loadSavedLocalState(userId: userId, movieRecordId: recordId)
-                    }
-                }
             }
             .padding(.horizontal, 16)
             .padding(.top, 40)
@@ -193,29 +184,23 @@ struct MovieDetails: View {
     }
 
     private func circleIcon(system: String, action: @escaping () -> Void) -> some View {
-        let circleFill = Color.gray.opacity(0.15)
-
-        return Button(action: action) {
+        Button(action: action) {
             Image(systemName: system)
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(Color.iconColor)
                 .frame(width: 32, height: 32)
-                .background(circleFill)
+                .background(Color.gray.opacity(0.15))
                 .clipShape(Circle())
         }
-        .contentShape(Rectangle())
-        .padding(.vertical, 4)
     }
 
-    // MARK: - Merged Blocks
+    // MARK: - Status
 
     private var statusArea: some View {
         Group {
             if vm.isLoading {
-                ProgressView()
-                    .padding(.top, 20)
+                ProgressView().padding(.top, 20)
             }
-
             if let errorMessage = vm.errorMessage {
                 Text("Error: \(errorMessage)")
                     .foregroundStyle(.red)
@@ -223,6 +208,8 @@ struct MovieDetails: View {
             }
         }
     }
+
+
 
     /// Info grid + Story + IMDb + divider (all in one “Details” block)
     private var detailsBlock: some View {

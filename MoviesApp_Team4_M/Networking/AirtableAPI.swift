@@ -5,12 +5,16 @@
 //  Created by Ruba Alghamdi on 15/07/1447 AH.
 //
 
+
 import Foundation
 
 extension Airtable {
 
     // MARK: - Generic fetchers
-    static func fetchById<T: Decodable>(table: String, recordId: String) async throws -> AirtableRecord<T> {
+    static func fetchById<T: Decodable>(
+        table: String,
+        recordId: String
+    ) async throws -> AirtableRecord<T> {
         let encodedTable = encodeTable(table)
         return try await get("\(encodedTable)/\(recordId)")
     }
@@ -26,16 +30,21 @@ extension Airtable {
         var items: [URLQueryItem] = [
             URLQueryItem(name: "filterByFormula", value: filterByFormula)
         ]
+
         if let maxRecords {
             items.append(URLQueryItem(name: "maxRecords", value: String(maxRecords)))
         }
 
-        let response: AirtableListResponse<T> = try await get(encodedTable, queryItems: items)
+        let response: AirtableListResponse<T> =
+            try await get(encodedTable, queryItems: items)
+
         return response.records
     }
 
     // MARK: - Movies
-    static func fetchMovieById(recordId: String) async throws -> AirtableRecord<AirtableMovieFields> {
+    static func fetchMovieById(
+        recordId: String
+    ) async throws -> AirtableRecord<AirtableMovieFields> {
         let table = encodeTable(moviesTable)
         return try await get("\(table)/\(recordId)")
     }
@@ -53,7 +62,9 @@ extension Airtable {
         let user_id: String?
     }
 
-    static func createReview(fields: ReviewCreateFields) async throws {
+    static func createReview(
+        fields: ReviewCreateFields
+    ) async throws {
         let table = encodeTable(reviewsTable)
         let payload = CreateRecordRequest(fields: fields)
         let body = try JSONEncoder().encode(payload)
@@ -73,25 +84,46 @@ extension Airtable {
     }
 
     // MARK: - Saved Movies
+
     struct SavedMovieCreateFields: Encodable {
         let user_id: String
         let movie_id: [String]   // Airtable linked record expects array
     }
 
-    static func createSavedMovie(fields: SavedMovieCreateFields) async throws {
+    static func createSavedMovie(
+        fields: SavedMovieCreateFields
+    ) async throws {
         let table = encodeTable(savedMoviesTable)
         let payload = CreateRecordRequest(fields: fields)
         let body = try JSONEncoder().encode(payload)
         try await post(table, body: body)
     }
-    
+
+    // ⭐️ sara change:
+    // GET saved_movies مع فلترة (مثلاً حسب user_id أو movie_id)
+    static func listSavedMovies(
+        filterByFormula: String,
+        maxRecords: Int? = nil
+    ) async throws -> [AirtableRecord<SavedMovieFields>] {
+
+        try await listRecords(
+            table: savedMoviesTable,
+            filterByFormula: filterByFormula,
+            maxRecords: maxRecords
+        )
+    }
+
     // MARK: - Delete Review
-    static func deleteReview(reviewId: String) async throws {
+    static func deleteReview(
+        reviewId: String
+    ) async throws {
         let table = encodeTable(reviewsTable)
         let path = "\(table)/\(reviewId)"
-        let data = try await APIRequester.fetch(
+
+        _ = try await APIRequester.fetch(
             from: URL(string: "https://api.airtable.com/v0/\(baseId)/\(path)")!,
             method: .delete
         )
     }
 }
+

@@ -9,61 +9,73 @@
 import Foundation
 import Combine
 
+@MainActor
 class SignInViewModel: ObservableObject {
 
-    //  نخزن المستخدمين
+    // MARK: - State
+
     @Published var users: [UserRecord] = []
     @Published var currentUser: UserRecord?
+    @Published var isLoading = false
+    @Published var errorMessage: String?
 
-    //  نجيب المستخدمين من API
-    func getUsers() {
+    // MARK: - API
+
+    func getUsers() async {
 
         guard let url = URL(string: "https://api.airtable.com/v0/appsfcB6YESLj4NCN/users") else {
             return
         }
 
+        isLoading = true
+        errorMessage = nil
+        defer { isLoading = false }
+
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        
-        request.setValue("Bearer \(APItoken.APItoken)" , forHTTPHeaderField: "Authorization")
-        
-        URLSession.shared.dataTask(with: request) { data, response, error in
+        request.setValue("Bearer \(APItoken.APItoken)", forHTTPHeaderField: "Authorization")
 
-            guard let data = data else { return }
-
-            let decodedResponse = try? JSONDecoder().decode(UsersResponse.self, from: data)
-
-            DispatchQueue.main.async {
-                self.users = decodedResponse?.records ?? []
-            }
-
-        }.resume()
+        do {
+            let (data, _) = try await URLSession.shared.data(for: request)
+            let decodedResponse = try JSONDecoder().decode(UsersResponse.self, from: data)
+            self.users = decodedResponse.records
+        } catch {
+            self.users = []
+            self.errorMessage = error.localizedDescription
+        }
     }
 
-    //  التحقق من تسجيل الدخول
+    // MARK: - Sign In
+
     func signIn(email: String, password: String) -> Bool {
 
-        if let user = users.first(where: { record in
+        // ⭐️ sara change:
+        // تأكيد أن المستخدمين محمّلين قبل تسجيل الدخول
+        guard !users.isEmpty else {
+            errorMessage = "Users not loaded yet."
+            return false
+        }
 
+        guard let user = users.first(where: { record in
             guard
                 let userEmail = record.fields.email,
                 let userPassword = record.fields.password
             else {
-                return false // تجاهل المستخدم الناقص
+                return false
             }
-
             return userEmail == email && userPassword == password
-        }) {
-
-            currentUser = user
-            UserDefaults.standard.set(user.id, forKey: "userId")
-            return true
+        }) else {
+            errorMessage = "Invalid email or password."
+            return false
         }
 
-        return false
+        currentUser = user
+
+        // ⭐️ sara change:
+        // توحيد مفتاح userId في كل المشروع
+        UserDefaults.standard.set(user.id, forKey: "userId")
+
+        return true
     }
-
 }
-
-
 

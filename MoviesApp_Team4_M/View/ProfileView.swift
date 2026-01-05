@@ -80,7 +80,6 @@ struct ProfileView: View {
             .buttonStyle(.plain)
 
             // MARK: - Saved Movies Title
-            // 🔹 هذا الجزء طلعناه برا NavigationLink (كان سبب خراب الواجهة)
             Text("Saved movies")
                 .font(.title2)
                 .fontWeight(.semibold)
@@ -90,8 +89,10 @@ struct ProfileView: View {
             Spacer()
 
             // MARK: - Saved Movies Content
-            // 🔹 نعرض empty state أو عدد الأفلام المحفوظة
-            if savedMoviesVM.savedMovies.isEmpty {
+            if savedMoviesVM.isLoading {
+                ProgressView()
+                    .frame(maxWidth: .infinity)
+            } else if savedMoviesVM.savedMovies.isEmpty {
                 VStack(spacing: 12) {
                     Image("movieisme logo")
                         .resizable()
@@ -119,10 +120,12 @@ struct ProfileView: View {
         .toolbar(.hidden, for: .navigationBar)
 
         // MARK: - API Calls
-        // 🔹 نجلب بيانات المستخدم + الأفلام المحفوظة
-        .onAppear {
+        // ⭐️ sara change:
+        // - جلب بيانات المستخدم
+        // - جلب الأفلام المحفوظة باستخدام async / await
+        .task {
             viewModel.getUser()
-            savedMoviesVM.getSavedMovies()
+            await savedMoviesVM.getSavedMovies()
         }
     }
 }
@@ -132,6 +135,4 @@ struct ProfileView: View {
         ProfileView()
     }
 }
-
-
 

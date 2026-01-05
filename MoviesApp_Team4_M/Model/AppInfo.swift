@@ -125,3 +125,4 @@ struct SavedMovieFields: Decodable {
     let user_id: String
     let movie_id: [String]
 }
+

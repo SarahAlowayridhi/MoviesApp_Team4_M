@@ -5,6 +5,7 @@
 //  Created by Ruba Alghamdi on 13/07/1447 AH.
 //
 
+
 import Foundation
 import Combine
 
@@ -48,21 +49,19 @@ final class MovieDetailsVM: ObservableObject {
 
     var directorNameText: String { director?.name ?? "-" }
 
-    // ⚠️ مهم: لا نغيّر هذا عشان الصور ما تنكسر
     var directorImageURL: URL? {
         guard let img = director?.image, !img.isEmpty else { return nil }
         return URL(string: img)
     }
 
     // ⭐️ sara change:
-    // هنا أهم تعديل: نمرّر userId داخل ReviewUI
-    // عشان نعرف صاحب الريفيو ونسمح له بالحذف
+    // تمرير userId لمعرفة صاحب الريفيو
     var reviewsUI: [ReviewUI] {
         reviews.map { rec in
             let f = rec.fields
             return ReviewUI(
                 id: rec.id,
-                userId: f.user_id,          // ⭐️ sara change
+                userId: f.user_id,
                 userName: f.user_id ?? "User",
                 stars: Int((f.rate ?? 0).rounded()),
                 text: f.review_text ?? "",
@@ -86,12 +85,19 @@ final class MovieDetailsVM: ObservableObject {
             await fetchDirector()
             await fetchActors()
             await fetchReviews()
+
+            // ⭐️ sara change:
+            // التأكد من حالة الحفظ من السيرفر
+            if let userId = UserDefaults.standard.string(forKey: "userId"),
+               !userId.isEmpty {
+                await checkIfSaved(userId: userId, movieRecordId: recordId)
+            }
+
         } catch {
             errorMessage = error.localizedDescription
         }
     }
 
-    // ⚠️ لا نغيّرها (مرتبطة بصور الممثلين)
     func actorImageURL(_ actor: Actors) -> URL? {
         guard let img = actor.image, !img.isEmpty else { return nil }
         return URL(string: img)
@@ -120,47 +126,40 @@ final class MovieDetailsVM: ObservableObject {
                 user_id: userId,
                 movie_id: [movieRecordId]
             )
+
             try await Airtable.createSavedMovie(fields: fields)
 
             // ⭐️ sara change:
-            // نحدّث الحالة مباشرة عشان الأيقونة تتعبّى
-            isSaved = true
-            setSavedLocal(userId: userId, movieRecordId: movieRecordId, saved: true)
+            // بعد الحفظ نتحقق من السيرفر مباشرة
+            await checkIfSaved(userId: userId, movieRecordId: movieRecordId)
 
         } catch {
             saveErrorMessage = error.localizedDescription
         }
     }
 
-    // MARK: - Local Saved State (UserDefaults)
+    // ⭐️ sara change:
+    // التحقق من حالة الحفظ من Airtable
+    private func checkIfSaved(userId: String, movieRecordId: String) async {
+        let formula = #"AND({user_id} = '\#(userId)', FIND('\#(movieRecordId)', ARRAYJOIN({movie_id})))"#
 
-    func loadSavedLocalState(userId: String, movieRecordId: String) {
-        let key = savedKey(for: userId)
-        let savedSet = Set(UserDefaults.standard.stringArray(forKey: key) ?? [])
-        isSaved = savedSet.contains(movieRecordId)
-    }
+        do {
+            let records: [AirtableRecord<SavedMovieFields>] =
+                try await Airtable.listRecords(
+                    table: Airtable.savedMoviesTable,
+                    filterByFormula: formula,
+                    maxRecords: 1
+                )
 
-    private func savedKey(for userId: String) -> String {
-        "saved_movies_local_\(userId)"
-    }
-
-    private func setSavedLocal(userId: String, movieRecordId: String, saved: Bool) {
-        let key = savedKey(for: userId)
-
-        var set = Set(UserDefaults.standard.stringArray(forKey: key) ?? [])
-        if saved {
-            set.insert(movieRecordId)
-        } else {
-            set.remove(movieRecordId)
+            isSaved = !records.isEmpty
+        } catch {
+            isSaved = false
         }
-
-        UserDefaults.standard.set(Array(set), forKey: key)
     }
 
     // MARK: - Fetching (Airtable)
 
     private func fetchDirector() async {
-        // A) Direct director id inside movieFields
         if let directorId = movieFields?.director?.first {
             do {
                 let rec: AirtableRecord<Directors> = try await Airtable.fetchById(
@@ -169,12 +168,9 @@ final class MovieDetailsVM: ObservableObject {
                 )
                 director = rec.fields
                 return
-            } catch {
-                print("fetchDirector (direct) failed:", error)
-            }
+            } catch { }
         }
 
-        // B) Join table fallback
         guard let movieRecordId = self.recordId else {
             director = nil
             return
@@ -184,11 +180,11 @@ final class MovieDetailsVM: ObservableObject {
 
         do {
             let links: [AirtableRecord<MovieDirectorLinkFields>] =
-            try await Airtable.listRecords(
-                table: Airtable.movieDirectorsTable,
-                filterByFormula: formula,
-                maxRecords: 10
-            )
+                try await Airtable.listRecords(
+                    table: Airtable.movieDirectorsTable,
+                    filterByFormula: formula,
+                    maxRecords: 10
+                )
 
             guard let directorId = links.compactMap({ $0.fields.director_id?.first }).first else {
                 director = nil
@@ -221,11 +217,11 @@ final class MovieDetailsVM: ObservableObject {
 
         do {
             let links: [AirtableRecord<MovieActorLinkFields>] =
-            try await Airtable.listRecords(
-                table: Airtable.movieActorsTable,
-                filterByFormula: formula,
-                maxRecords: 50
-            )
+                try await Airtable.listRecords(
+                    table: Airtable.movieActorsTable,
+                    filterByFormula: formula,
+                    maxRecords: 50
+                )
 
             let actorIds = links.compactMap { $0.fields.actor_id?.first }
             guard !actorIds.isEmpty else {
@@ -239,7 +235,6 @@ final class MovieDetailsVM: ObservableObject {
         }
     }
 
-    // ⚠️ لا نغيّرها (مهمة للأداء + الصور)
     nonisolated private func fetchActorsByIds(_ ids: [String]) async {
         var result: [Actors] = []
         result.reserveCapacity(ids.count)
@@ -292,7 +287,7 @@ final class MovieDetailsVM: ObservableObject {
     }
 
     // ⭐️ sara change:
-    // دالة حذف الريفيو (يستدعيها MovieDetails.swift)
+    // حذف الريفيو
     func deleteReview(reviewId: String) async {
         do {
             try await Airtable.deleteReview(reviewId: reviewId)
