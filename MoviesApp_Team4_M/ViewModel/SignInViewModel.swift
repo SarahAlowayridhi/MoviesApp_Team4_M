@@ -12,14 +12,12 @@ import Combine
 @MainActor
 class SignInViewModel: ObservableObject {
 
-    // MARK: - State
 
     @Published var users: [UserRecord] = []
     @Published var currentUser: UserRecord?
     @Published var isLoading = false
     @Published var errorMessage: String?
 
-    // MARK: - API
 
     func getUsers() async {
 
@@ -45,11 +43,9 @@ class SignInViewModel: ObservableObject {
         }
     }
 
-    // MARK: - Sign In
 
     func signIn(email: String, password: String) -> Bool {
 
-        // ⭐️ sara change:
         // تأكيد أن المستخدمين محمّلين قبل تسجيل الدخول
         guard !users.isEmpty else {
             errorMessage = "Users not loaded yet."
@@ -71,7 +67,6 @@ class SignInViewModel: ObservableObject {
 
         currentUser = user
 
-        // ⭐️ sara change:
         // توحيد مفتاح userId في كل المشروع
         UserDefaults.standard.set(user.id, forKey: "userId")
 

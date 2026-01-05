@@ -5,11 +5,10 @@
 //  Created by Sarah Alowayridhi on 15/07/1447 AH.
 //
 
-
 import Foundation
 import Combine
 
-// MARK: - UI Model (جاهز للعرض)
+// MARK: - UI Model
 
 struct SavedMovieCard: Identifiable {
     let id: String           // movie record id
@@ -71,7 +70,7 @@ class SavedMoviesViewModel: ObservableObject {
         }
     }
 
-    // MARK: - Private helpers
+    // MARK: - Helpers
 
     /// نحول saved_movies → movie cards (للواجهة)
     private func buildSavedMovieCards(
@@ -89,7 +88,7 @@ class SavedMoviesViewModel: ObservableObject {
             }
 
             do {
-                // جلب تفاصيل الفيلم
+                // جلب تفاصيل الفيلم (نفس طريقة MovieCenter)
                 let movieRecord: AirtableRecord<Movie> =
                     try await Airtable.fetchById(
                         table: Airtable.moviesTable,
@@ -108,12 +107,23 @@ class SavedMoviesViewModel: ObservableObject {
                 )
 
             } catch {
-                // لو فشل جلب فيلم معيّن، نتجاهله (safe)
+                // لو فشل جلب فيلم معيّن، نتجاهله
                 continue
             }
         }
 
-        self.savedMovieCards = cards
+        // ⭐️ sara change:
+        // إزالة التكرار — كل فيلم يظهر مرة وحدة فقط
+        var unique: [SavedMovieCard] = []
+        var seen = Set<String>()
+
+        for card in cards {
+            if seen.insert(card.id).inserted {
+                unique.append(card)
+            }
+        }
+
+        self.savedMovieCards = unique
     }
 }
 
