@@ -279,7 +279,7 @@ struct MovieDetails: View {
 
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 14) {
-                        ForEach(vm.actors) { actor in
+                        ForEach(Array(vm.actors.enumerated()), id: \.offset) { _, actor in
                             VStack(spacing: 8) {
                                 actorImage(actor)
 
