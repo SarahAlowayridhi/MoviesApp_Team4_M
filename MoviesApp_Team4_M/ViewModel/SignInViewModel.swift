@@ -23,7 +23,7 @@ class SignInViewModel: ObservableObject {
         }
 
         var request = URLRequest(url: url)
-        request.httpMethod = "GET"
+        request.httpMethod = HTTPMethod.get.rawValue
         
         request.setValue(APItoken.APItoken , forHTTPHeaderField: "Authorization")
         
