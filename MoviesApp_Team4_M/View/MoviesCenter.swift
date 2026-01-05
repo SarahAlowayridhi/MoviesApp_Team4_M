@@ -35,7 +35,9 @@ struct MoviesCenter: View {
             }
             .background(Color.black.ignoresSafeArea())
         }
+        .toolbar(.hidden, for: .navigationBar)
     }
+    
 }
 
 struct Search: View {
@@ -110,28 +112,23 @@ struct HighRatedMovie: View {
             TabView {
                 ForEach(movies) { movie in
                     NavigationLink {
-                        MovieDetails(recordId: movie.id)
+                        MovieDetails(
+                            recordId: movie.id,
+                            fallbackPosterURL: movie.fields.poster
+                        )
                     } label: {
                         AsyncImage(url: URL(string: movie.fields.poster ?? "")) { phase in
                             switch phase {
-                            case .empty:
-                                ProgressView()
-                                    .frame(width: 366, height: 434)
                             case .success(let image):
                                 image
                                     .resizable()
                                     .scaledToFill()
-                                    .frame(width: 366, height: 434)
-                                    .clipShape(RoundedRectangle(cornerRadius: 14))
-                            case .failure:
+                            default:
                                 Color.gray.opacity(0.3)
-                                    .frame(width: 366, height: 434)
-                                    .clipShape(RoundedRectangle(cornerRadius: 14))
-                            @unknown default:
-                                EmptyView()
                             }
                         }
                     }
+
                     .buttonStyle(.plain)
                     .padding(.bottom, 50)
                 }

@@ -32,6 +32,9 @@ struct AirtableMovieFields: Codable {
     let actors: [String]?
     let director: [String]?
     let reviews: [String]?
+
+    // Added to match usage elsewhere (e.g., SavedMoviesViewModel uses poster)
+    let poster: String?
 }
 
 struct AirtableReviewFields: Codable {
@@ -90,3 +93,4 @@ enum AirtableIDList: Codable {
         }
     }
 }
+
