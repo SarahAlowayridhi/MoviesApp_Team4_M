@@ -15,7 +15,7 @@ struct SignInView: View {
 
             ZStack(alignment: .top) {
 
-                Image("Image")
+                Image("signinbackground")
                     .resizable()
                     .scaledToFit()
                     .frame(maxWidth: .infinity)
@@ -117,6 +117,9 @@ struct SignInView: View {
 #Preview {
     SignInView()
 }
+
+
+
 
 
 

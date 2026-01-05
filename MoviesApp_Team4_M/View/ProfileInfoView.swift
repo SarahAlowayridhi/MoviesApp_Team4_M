@@ -1,13 +1,19 @@
 import SwiftUI
 
 struct ProfileInfoView: View {
-    
+
     @Environment(\.dismiss) private var dismiss
     @State private var goToEdit = false
+    @StateObject private var viewModel = ProfileViewModel()
+    @AppStorage("isLoggedIn") private var isLoggedIn = true
+
+    let user: UserRecord?
 
     var body: some View {
+
         VStack(spacing: 24) {
 
+            // Header
             HStack {
                 Button {
                     dismiss()
@@ -39,28 +45,30 @@ struct ProfileInfoView: View {
 
             Divider()
 
+            // Profile image
             ZStack {
                 Circle()
                     .fill(Color.gray.opacity(0.3))
                     .frame(width: 110, height: 110)
 
-                Image("profilephoto")
-                    .resizable()
-                    .scaledToFill()
-                    .frame(width: 80, height: 80)
-                    .clipShape(Circle())
+                ProfileImageView(
+                    imageUrl: user?.fields.profile_image,
+                    size: 65
+                )
+
             }
             .padding(.top, 8)
 
+            // Info card
             VStack(spacing: 0) {
 
                 HStack {
-                    Text("First name")
+                    Text("Name")
                         .foregroundColor(.white)
 
                     Spacer()
 
-                    Text("\tSarah")
+                    Text(user?.fields.name ?? "—")
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
@@ -69,12 +77,12 @@ struct ProfileInfoView: View {
                 Divider()
 
                 HStack {
-                    Text("Last name")
+                    Text("Email")
                         .foregroundColor(.white)
 
                     Spacer()
 
-                    Text("\tAbdullah")
+                    Text(user?.fields.email ?? "—")
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
@@ -86,10 +94,10 @@ struct ProfileInfoView: View {
 
             Spacer()
 
+            // Sign out
             Button {
-                // For now: just pop back to ProfileView
-                // (If you want REAL sign out -> SignInView, tell me and I’ll wire it via RootView binding)
-                dismiss()
+                isLoggedIn = false
+                UserDefaults.standard.removeObject(forKey: "userId")
             } label: {
                 Text("Sign Out")
                     .foregroundColor(.red)
@@ -100,9 +108,9 @@ struct ProfileInfoView: View {
             }
             .padding(.horizontal)
             .padding(.bottom)
-            
+
             .navigationDestination(isPresented: $goToEdit) {
-                ProfileEditView()
+                ProfileEditView(user: user)
             }
         }
         .padding(.top, 8)
@@ -113,7 +121,10 @@ struct ProfileInfoView: View {
 
 #Preview {
     NavigationStack {
-        ProfileInfoView()
+        ProfileInfoView(user: nil)
     }
 }
+
+
+
 

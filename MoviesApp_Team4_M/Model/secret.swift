@@ -9,6 +9,6 @@ import Foundation
 
 struct APItoken {
     
-    static let APItoken =  "Bearer patHXtgI1qrXTZwz3.a455bfcc1a171662a512c7890954a8f4335f00601ea5d14d425baa3baa2d53c0"
+    static let APItoken =  "patHXtgI1qrXTZwz3.a455bfcc1a171662a512c7890954a8f4335f00601ea5d14d425baa3baa2d53c0"
     
 }

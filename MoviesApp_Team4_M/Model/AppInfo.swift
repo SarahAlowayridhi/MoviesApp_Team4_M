@@ -108,3 +108,20 @@ struct User: Codable {
     let name: String
     let profile_image: String?
 }
+
+// Response wrapper
+struct SavedMoviesResponse: Decodable {
+    let records: [SavedMovieRecord]
+}
+
+// Single record
+struct SavedMovieRecord: Decodable, Identifiable {
+    let id: String
+    let fields: SavedMovieFields
+}
+
+// Fields inside each record
+struct SavedMovieFields: Decodable {
+    let user_id: String
+    let movie_id: [String]
+}

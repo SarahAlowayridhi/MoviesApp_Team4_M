@@ -1,12 +1,19 @@
 import SwiftUI
 
 struct ProfileView: View {
+
     @Environment(\.dismiss) private var dismiss
+
+    // 🔹 ViewModel خاص ببيانات المستخدم (profile)
+    @StateObject private var viewModel = ProfileViewModel()
+
+    // 🔹 ViewModel خاص بالأفلام المحفوظة (saved_movies)
+    @StateObject private var savedMoviesVM = SavedMoviesViewModel()
 
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
 
-            // Back should dismiss (go back to MoviesCenter)
+            // MARK: - Back button
             Button {
                 dismiss()
             } label: {
@@ -20,13 +27,15 @@ struct ProfileView: View {
                 }
             }
 
+            // MARK: - Title
             Text("Profile")
                 .font(.largeTitle)
                 .fontWeight(.bold)
+                .foregroundColor(.white)
 
-            // This whole card should navigate to ProfileInfo
+            // MARK: - Profile card (Navigation to ProfileInfoView)
             NavigationLink {
-                ProfileInfoView()
+                ProfileInfoView(user: viewModel.user)
             } label: {
                 ZStack {
                     Rectangle()
@@ -35,25 +44,27 @@ struct ProfileView: View {
                         .cornerRadius(16)
 
                     HStack(spacing: 16) {
+
+                        // 🔹 Profile image from API (or fallback)
                         ZStack {
                             Circle()
                                 .fill(Color.gray.opacity(0.3))
                                 .frame(width: 80, height: 80)
 
-                            Image("profilephoto")
-                                .resizable()
-                                .scaledToFill()
-                                .frame(width: 65, height: 65)
-                                .clipShape(Circle())
+                            ProfileImageView(
+                                imageUrl: viewModel.user?.fields.profile_image,
+                                size: 65
+                            )
                         }
 
+                        // 🔹 User name & email
                         VStack(alignment: .leading, spacing: 6) {
-                            Text("Sarah Abdullah")
+                            Text(viewModel.user?.fields.name ?? "—")
                                 .font(.headline)
                                 .fontWeight(.bold)
                                 .foregroundColor(.white)
 
-                            Text("Xxxx234@gmail.com")
+                            Text(viewModel.user?.fields.email ?? "—")
                                 .font(.caption)
                                 .foregroundColor(.gray)
                         }
@@ -68,32 +79,51 @@ struct ProfileView: View {
             }
             .buttonStyle(.plain)
 
+            // MARK: - Saved Movies Title
+            // 🔹 هذا الجزء طلعناه برا NavigationLink (كان سبب خراب الواجهة)
             Text("Saved movies")
                 .font(.title2)
                 .fontWeight(.semibold)
+                .foregroundColor(.white)
                 .padding(.top, 8)
 
             Spacer()
 
-            VStack(spacing: 12) {
-                Image("movieisme logo")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 73.07, height: 43.66)
-                    .foregroundColor(.gray.opacity(0.6))
+            // MARK: - Saved Movies Content
+            // 🔹 نعرض empty state أو عدد الأفلام المحفوظة
+            if savedMoviesVM.savedMovies.isEmpty {
+                VStack(spacing: 12) {
+                    Image("movieisme logo")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 73.07, height: 43.66)
+                        .foregroundColor(.gray.opacity(0.6))
 
-                Text("No saved movies yet, start save\nyour favourites")
+                    Text("No saved movies yet, start save\nyour favourites")
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                        .multilineTextAlignment(.center)
+                }
+                .frame(maxWidth: .infinity)
+            } else {
+                // 🔹 مؤقتًا نعرض عدد الأفلام (إثبات أن API شغال)
+                Text("You have \(savedMoviesVM.savedMovies.count) saved movies")
                     .font(.caption)
-                    .foregroundColor(.gray)
-                    .multilineTextAlignment(.center)
+                    .foregroundColor(.white)
             }
-            .frame(maxWidth: .infinity)
 
             Spacer()
         }
         .padding()
         .background(Color.black.ignoresSafeArea())
         .toolbar(.hidden, for: .navigationBar)
+
+        // MARK: - API Calls
+        // 🔹 نجلب بيانات المستخدم + الأفلام المحفوظة
+        .onAppear {
+            viewModel.getUser()
+            savedMoviesVM.getSavedMovies()
+        }
     }
 }
 
@@ -102,3 +132,6 @@ struct ProfileView: View {
         ProfileView()
     }
 }
+
+
+

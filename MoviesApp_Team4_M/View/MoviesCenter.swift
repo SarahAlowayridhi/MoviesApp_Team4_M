@@ -11,6 +11,7 @@ struct MoviesCenter: View {
     @StateObject private var moviesVm = MovieCenterVM()
     
     var body: some View {
+        NavigationStack {
         ScrollView {
             VStack(spacing: 0) {
                 Search()
@@ -31,12 +32,17 @@ struct MoviesCenter: View {
         }
         .task {
             await moviesVm.fetchMovies()
+            
         }
+        
+        .background(Color.black.ignoresSafeArea())
+    }
     }
 }
 
 struct Search: View {
     @State private var searchText = ""
+    @StateObject private var viewModel = ProfileViewModel()
 
     var body: some View {
         VStack(spacing: 16) {
@@ -52,10 +58,15 @@ struct Search: View {
                         .fill(Color.gray.opacity(0.5))
                         .frame(width: 41, height: 41)
 
-                    Image("ProfileIcon")
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(width: 35, height: 35)
+                    NavigationLink {
+                        ProfileView()
+                    } label: {
+                        ProfileImageView(
+                            imageUrl: viewModel.user?.fields.profile_image,
+                            size: 65
+                        )
+                    }
+                    .buttonStyle(.plain)
                 }
             }
             .padding(.horizontal, 16)

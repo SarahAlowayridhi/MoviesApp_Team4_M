@@ -23,9 +23,9 @@ class SignInViewModel: ObservableObject {
         }
 
         var request = URLRequest(url: url)
-        request.httpMethod = HTTPMethod.get.rawValue
+        request.httpMethod = "GET"
         
-        request.setValue(APItoken.APItoken , forHTTPHeaderField: "Authorization")
+        request.setValue("Bearer \(APItoken.APItoken)" , forHTTPHeaderField: "Authorization")
         
         URLSession.shared.dataTask(with: request) { data, response, error in
 
@@ -64,5 +64,6 @@ class SignInViewModel: ObservableObject {
     }
 
 }
+
 
 
