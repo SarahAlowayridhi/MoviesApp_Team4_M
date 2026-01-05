@@ -73,6 +73,7 @@ final class MovieDetailsVM: ObservableObject {
     // MARK: - Public Actions
 
     func load(recordId: String) async {
+        isSaved = false
         isLoading = true
         errorMessage = nil
         defer { isLoading = false }

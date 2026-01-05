@@ -4,10 +4,10 @@ struct ProfileView: View {
 
     @Environment(\.dismiss) private var dismiss
 
-    // 🔹 ViewModel خاص ببيانات المستخدم (profile)
+    // ViewModel خاص ببيانات المستخدم
     @StateObject private var viewModel = ProfileViewModel()
 
-    // 🔹 ViewModel خاص بالأفلام المحفوظة (saved_movies)
+    // ViewModel خاص بالأفلام المحفوظة
     @StateObject private var savedMoviesVM = SavedMoviesViewModel()
 
     var body: some View {
@@ -33,7 +33,7 @@ struct ProfileView: View {
                 .fontWeight(.bold)
                 .foregroundColor(.white)
 
-            // MARK: - Profile card (Navigation to ProfileInfoView)
+            // MARK: - Profile card
             NavigationLink {
                 ProfileInfoView(user: viewModel.user)
             } label: {
@@ -45,7 +45,7 @@ struct ProfileView: View {
 
                     HStack(spacing: 16) {
 
-                        // 🔹 Profile image from API (or fallback)
+                        // Profile image
                         ZStack {
                             Circle()
                                 .fill(Color.gray.opacity(0.3))
@@ -57,7 +57,7 @@ struct ProfileView: View {
                             )
                         }
 
-                        // 🔹 User name & email
+                        // Name & email
                         VStack(alignment: .leading, spacing: 6) {
                             Text(viewModel.user?.fields.name ?? "—")
                                 .font(.headline)
@@ -86,31 +86,35 @@ struct ProfileView: View {
                 .foregroundColor(.white)
                 .padding(.top, 8)
 
-            Spacer()
-
             // MARK: - Saved Movies Content
             if savedMoviesVM.isLoading {
                 ProgressView()
                     .frame(maxWidth: .infinity)
-            } else if savedMoviesVM.savedMovies.isEmpty {
+            } else if savedMoviesVM.savedMovieCards.isEmpty {
                 VStack(spacing: 12) {
                     Image("movieisme logo")
                         .resizable()
                         .scaledToFit()
-                        .frame(width: 73.07, height: 43.66)
+                        .frame(width: 73, height: 44)
                         .foregroundColor(.gray.opacity(0.6))
 
-                    Text("No saved movies yet, start save\nyour favourites")
+                    Text("No saved movies yet,\nstart saving your favourites")
                         .font(.caption)
                         .foregroundColor(.gray)
                         .multilineTextAlignment(.center)
                 }
                 .frame(maxWidth: .infinity)
             } else {
-                // 🔹 مؤقتًا نعرض عدد الأفلام (إثبات أن API شغال)
-                Text("You have \(savedMoviesVM.savedMovies.count) saved movies")
-                    .font(.caption)
-                    .foregroundColor(.white)
+
+                // ⭐️ Carousel أفقي للأفلام المحفوظة
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 16) {
+                        ForEach(savedMoviesVM.savedMovieCards) { movie in
+                            savedMovieCard(movie)
+                        }
+                    }
+                    .padding(.horizontal, 2)
+                }
             }
 
             Spacer()
@@ -120,13 +124,53 @@ struct ProfileView: View {
         .toolbar(.hidden, for: .navigationBar)
 
         // MARK: - API Calls
-        // ⭐️ sara change:
-        // - جلب بيانات المستخدم
-        // - جلب الأفلام المحفوظة باستخدام async / await
         .task {
             viewModel.getUser()
             await savedMoviesVM.getSavedMovies()
         }
+    }
+
+    // MARK: - Saved Movie Card UI
+
+    private func savedMovieCard(_ movie: SavedMovieCard) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+
+            ZStack(alignment: .topLeading) {
+                // Poster
+                if let url = movie.posterURL {
+                    AsyncImage(url: url) { phase in
+                        switch phase {
+                        case .success(let image):
+                            image.resizable().scaledToFill()
+                        default:
+                            Color.gray.opacity(0.3)
+                        }
+                    }
+                } else {
+                    Color.gray.opacity(0.3)
+                }
+
+                // Saved badge
+                Text("Saved")
+                    .font(.caption2)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.black)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Color.yellow)
+                    .clipShape(Capsule())
+                    .padding(6)
+            }
+            .frame(width: 120, height: 170)
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+
+            // Movie title
+            Text(movie.title)
+                .font(.caption)
+                .foregroundColor(.white)
+                .lineLimit(1)
+        }
+        .frame(width: 120)
     }
 }
 
