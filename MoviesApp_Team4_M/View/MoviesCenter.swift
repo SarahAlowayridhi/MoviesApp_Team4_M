@@ -12,31 +12,29 @@ struct MoviesCenter: View {
     
     var body: some View {
         NavigationStack {
-        ScrollView {
-            VStack(spacing: 0) {
-                Search()
-                
-                if moviesVm.isLoading {
-                    ProgressView("Loading movies...")
-                        .padding()
-                } else if let error = moviesVm.errorMessage {
-                    Text("Error: \(error)")
-                        .foregroundColor(.red)
-                        .padding()
-                } else {
-                    HighRatedMovie(movies: moviesVm.movies)
+            ScrollView {
+                VStack(spacing: 0) {
+                    Search()
+                    
+                    if moviesVm.isLoading {
+                        ProgressView("Loading movies...")
+                            .padding()
+                    } else if let error = moviesVm.errorMessage {
+                        Text("Error: \(error)")
+                            .foregroundColor(.red)
+                            .padding()
+                    } else {
+                        HighRatedMovie(movies: moviesVm.movies)
+                    }
+                    
+                    GenreSection()
                 }
-                
-                GenreSection()
             }
+            .task {
+                await moviesVm.fetchMovies()
+            }
+            .background(Color.black.ignoresSafeArea())
         }
-        .task {
-            await moviesVm.fetchMovies()
-            
-        }
-        
-        .background(Color.black.ignoresSafeArea())
-    }
     }
 }
 
@@ -104,56 +102,38 @@ struct HighRatedMovie: View {
                 .font(.system(size: 24, weight: .bold))
                 .foregroundColor(.white)
                 .padding(.top, 24)
-            
-            Text("Movies count: \(movies.count)")
-                .foregroundColor(.white)
-                .font(.caption)
 
-            if movies.isEmpty {
-                Text("No movies loaded")
-                    .foregroundColor(.gray)
-                    .frame(height: 460)
-            } else {
-                TabView {
-                    ForEach(movies) { movie in
-                        VStack {
-                            Text("Movie: \(movie.fields.name)")
-                                .foregroundColor(.white)
-                            Text("Poster URL: \(movie.fields.poster ?? "-")")
-                                .foregroundColor(.gray)
-                                .font(.caption)
-                            
-                            AsyncImage(url: URL(string: movie.fields.poster ?? "")) { phase in
-                                switch phase {
-                                case .empty:
-                                    ProgressView()
-                                        .frame(width: 366, height: 434)
-                                case .success(let image):
-                                    image
-                                        .resizable()
-                                        .scaledToFill()
-                                        .frame(width: 366, height: 434)
-                                        .clipShape(RoundedRectangle(cornerRadius: 14))
-                                case .failure(let error):
-                                    VStack {
-                                        Text("Image failed to load")
-                                            .foregroundColor(.red)
-                                        Text(error.localizedDescription)
-                                            .foregroundColor(.gray)
-                                            .font(.caption)
-                                    }
+            TabView {
+                ForEach(movies) { movie in
+                    NavigationLink {
+                        MovieDetails(recordId: movie.id)
+                    } label: {
+                        AsyncImage(url: URL(string: movie.fields.poster ?? "")) { phase in
+                            switch phase {
+                            case .empty:
+                                ProgressView()
                                     .frame(width: 366, height: 434)
-                                @unknown default:
-                                    EmptyView()
-                                }
+                            case .success(let image):
+                                image
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(width: 366, height: 434)
+                                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                            case .failure:
+                                Color.gray.opacity(0.3)
+                                    .frame(width: 366, height: 434)
+                                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                            @unknown default:
+                                EmptyView()
                             }
                         }
-                        .padding(.bottom, 50)
                     }
+                    .buttonStyle(.plain)
+                    .padding(.bottom, 50)
                 }
-                .frame(height: 460)
-                .tabViewStyle(PageTabViewStyle(indexDisplayMode: .automatic))
             }
+            .frame(height: 460)
+            .tabViewStyle(PageTabViewStyle(indexDisplayMode: .automatic))
         }
         .padding(.horizontal, 16)
     }
@@ -228,4 +208,3 @@ struct GenreSection: View {
 #Preview {
     MoviesCenter()
 }
-
