@@ -153,7 +153,7 @@ struct MovieDetails: View {
                 }
 
                 circleIcon(system: vm.isSaved ? "bookmark.fill" : "bookmark") {
-                    let userId = UserDefaults.standard.string(forKey: "user_id") ?? ""
+                    let userId = UserDefaults.standard.string(forKey: "userId") ?? ""
                     guard !userId.isEmpty else {
                         vm.errorMessage = "No user is signed in."
                         return
@@ -168,7 +168,8 @@ struct MovieDetails: View {
                     // keeping identical behavior (you had a second load here)
                     await vm.load(recordId: recordId)
 
-                    let userId = UserDefaults.standard.string(forKey: "user_id") ?? ""
+                    // ⭐️ sara change: توحيد مفتاح userId
+                    let userId = UserDefaults.standard.string(forKey: "userId") ?? ""
                     if !userId.isEmpty {
                         vm.loadSavedLocalState(userId: userId, movieRecordId: recordId)
                     }
@@ -377,7 +378,10 @@ struct MovieDetails: View {
     }
 
     private func reviewCard(_ review: ReviewUI) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
+        // ⭐️ sara change: جلب userId الحالي (المستخدم المسجّل)
+        let currentUserId = UserDefaults.standard.string(forKey: "userId") ?? ""
+
+        return VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 10) {
                 Image("Image")
                     .resizable()
@@ -395,6 +399,20 @@ struct MovieDetails: View {
                 }
 
                 Spacer()
+
+                // ⭐️ sara change:
+                // زر حذف الريفيو (يظهر فقط إذا المستخدم مسجّل دخول)
+                if review.userId == currentUserId {
+                    Button {
+                        Task {
+                            await vm.deleteReview(reviewId: review.id)
+                        }
+                    } label: {
+                        Image(systemName: "trash")
+                            .foregroundColor(.red)
+                            .font(.system(size: 14, weight: .semibold))
+                    }
+                }
             }
 
             Text(review.text)
@@ -412,6 +430,8 @@ struct MovieDetails: View {
         .background(.opacity(0.06))
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
+
+    
 
     private func starsRow(count: Int) -> some View {
         HStack(spacing: 1) {
@@ -461,6 +481,7 @@ struct MovieDetails: View {
 
 struct ReviewUI: Identifiable {
     let id: String
+    let userId: String?
     let userName: String
     let stars: Int
     let text: String

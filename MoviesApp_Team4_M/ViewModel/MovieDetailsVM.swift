@@ -45,11 +45,14 @@ final class MovieDetailsVM: ObservableObject {
     var directorNameText: String { director?.name ?? "-" }
     var directorImageURL: URL? { URL(string: director?.image ?? "") }
 
+    // ⭐️ sara change:
+    // أضفنا userId داخل ReviewUI عشان نقدر نحدد صاحب الريفيو
     var reviewsUI: [ReviewUI] {
         reviews.map { rec in
             let f = rec.fields
             return ReviewUI(
                 id: rec.id,
+                userId: f.user_id,          // ⭐️ sara change
                 userName: f.user_id ?? "User",
                 stars: Int((f.rate ?? 0).rounded()),
                 text: f.review_text ?? "",
@@ -140,7 +143,6 @@ final class MovieDetailsVM: ObservableObject {
     // MARK: - Fetching (Airtable)
 
     private func fetchDirector() async {
-        // A) Direct director id inside movieFields
         if let directorId = movieFields?.director?.first {
             do {
                 let rec: AirtableRecord<Directors> = try await Airtable.fetchById(
@@ -150,102 +152,29 @@ final class MovieDetailsVM: ObservableObject {
                 director = rec.fields
                 return
             } catch {
-                print("fetchDirector (direct) failed:", error)
+                print("fetchDirector failed:", error)
             }
-        }
-
-        // B) Join table fallback: movie_directors
-        guard let movieRecordId = self.recordId else {
-            director = nil
-            return
-        }
-
-        let formula = #"movie_id="\#(movieRecordId)""#
-
-        do {
-            let links: [AirtableRecord<MovieDirectorLinkFields>] = try await Airtable.listRecords(
-                table: Airtable.movieDirectorsTable,
-                filterByFormula: formula,
-                maxRecords: 10
-            )
-
-            guard
-                let directorId = links.compactMap({ $0.fields.director_id?.first }).first
-            else {
-                print("No director_id found in movie_directors for movie:", movieRecordId)
-                director = nil
-                return
-            }
-
-            let rec: AirtableRecord<Directors> = try await Airtable.fetchById(
-                table: Airtable.directorsTable,
-                recordId: directorId
-            )
-            director = rec.fields
-
-            print("Director loaded:", director?.name ?? "-")
-        } catch {
-            print("fetchDirector (join) failed:", error)
-            director = nil
         }
     }
 
     private func fetchActors() async {
-        // A) Direct actor ids inside movieFields
         let directActorIds = movieFields?.actors ?? []
         if !directActorIds.isEmpty {
             await fetchActorsByIds(directActorIds)
             return
         }
-
-        // B) Join table fallback: movie_actors
-        guard let movieRecordId = self.recordId else {
-            actors = []
-            return
-        }
-
-        let formula = #"movie_id="\#(movieRecordId)""#
-
-        do {
-            let links: [AirtableRecord<MovieActorLinkFields>] = try await Airtable.listRecords(
-                table: Airtable.movieActorsTable,
-                filterByFormula: formula,
-                maxRecords: 50
-            )
-
-            let actorIds = links.compactMap { $0.fields.actor_id?.first }
-            guard !actorIds.isEmpty else {
-                print("No actor_id found in movie_actors for movie:", movieRecordId)
-                actors = []
-                return
-            }
-
-            await fetchActorsByIds(actorIds)
-            print("Actors loaded:", actors.map { $0.name ?? "-" })
-        } catch {
-            print("fetchActors (join) failed:", error)
-            actors = []
-        }
     }
 
-    // Make this method explicitly nonisolated so decoding and networking happen off the main actor.
     nonisolated private func fetchActorsByIds(_ ids: [String]) async {
         var result: [Actors] = []
-        result.reserveCapacity(ids.count)
 
         await withTaskGroup(of: Actors?.self) { group in
             for id in ids {
                 group.addTask {
-                    do {
-                        let rec: AirtableRecord<Actors> = try await Airtable.fetchById(
-                            table: Airtable.actorsTable,
-                            recordId: id
-                        )
-                        return rec.fields
-                    } catch {
-                        print("fetch actor by id failed:", id, error)
-                        return nil
-                    }
+                    try? await Airtable.fetchById(
+                        table: Airtable.actorsTable,
+                        recordId: id
+                    ).fields
                 }
             }
 
@@ -254,7 +183,6 @@ final class MovieDetailsVM: ObservableObject {
             }
         }
 
-        // hop back to main actor to update @Published state
         await MainActor.run {
             self.actors = result
         }
@@ -279,6 +207,17 @@ final class MovieDetailsVM: ObservableObject {
         } catch {
             reviews = []
             averageAppRatingText = "0.0"
+        }
+    }
+
+    // ⭐️ sara change:
+    // دالة حذف الريفيو + إعادة تحميل الريفيوهات
+    func deleteReview(reviewId: String) async {
+        do {
+            try await Airtable.deleteReview(reviewId: reviewId)
+            await fetchReviews()
+        } catch {
+            errorMessage = error.localizedDescription
         }
     }
 }

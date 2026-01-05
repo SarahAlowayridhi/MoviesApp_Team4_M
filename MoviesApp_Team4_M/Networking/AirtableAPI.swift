@@ -84,4 +84,14 @@ extension Airtable {
         let body = try JSONEncoder().encode(payload)
         try await post(table, body: body)
     }
+    
+    // MARK: - Delete Review
+    static func deleteReview(reviewId: String) async throws {
+        let table = encodeTable(reviewsTable)
+        let path = "\(table)/\(reviewId)"
+        let data = try await APIRequester.fetch(
+            from: URL(string: "https://api.airtable.com/v0/\(baseId)/\(path)")!,
+            method: .delete
+        )
+    }
 }
