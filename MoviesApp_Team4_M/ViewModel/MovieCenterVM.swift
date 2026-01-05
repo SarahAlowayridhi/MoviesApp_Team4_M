@@ -1,69 +1,72 @@
 //
-//  MovieCenterVM.swift
-//  MoviesApp_Team4_M
-//  Created by Ghadeer Fallatah on 03/07/1447 AH.
+//  MoviesCenterVM.swift
+//  MoviesClone
 //
+//  Created by Ghadeer Fallatah on 15/07/1447 AH.
+//
+
 import SwiftUI
 import Combine
 
+@MainActor
 class MovieCenterVM: ObservableObject {
     
-    @Published var movies: Movie?
-    @Published var actors: Actors?
-    @Published var directors: Directors?
-    //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    @Published private(set) var isLoading = false
-    @Published private(set) var errorMessage: String? = nil
-    @Published private(set) var movieFields: AirtableMovieFields? = nil
-
-    // MARK: - Display values (View reads these, no logic in View)
-    var titleText: String { movieFields?.name ?? "Loading..." }
-    var runtimeText: String { movieFields?.runtime ?? "-" }
-    var languageText: String { (movieFields?.language ?? []).joined(separator: ", ") }
-    var genreText: String { (movieFields?.genre ?? []).joined(separator: ", ") }
-    var storyText: String { movieFields?.story ?? "-" }
-    var imdbText: String {
-        let value = movieFields?.IMDb_rating ?? 0
-        return String(format: "%.1f", value)
-    }
-
-    func load(recordId: String) async {
+    @Published var movies: [MovieRecord] = []
+    @Published var actors: [ActorRecord] = []
+    @Published var directors: [DirectorRecord] = []
+    @Published var isLoading = false
+    @Published var errorMessage: String?
+    
+    func fetchMovies() async {
         isLoading = true
-        errorMessage = nil
-
+        
         do {
-            let record = try await Airtable.fetchMovieById(recordId: recordId)
-            movieFields = record.fields
+            let url = URL(string: "https://api.airtable.com/v0/appsfcB6YESLj4NCN/movies")!
+            let data = try await APIRequester.fetch(from: url, method: .get)
+            
+            // DEBUG: Print the raw JSON
+            if let jsonString = String(data: data, encoding: .utf8) {
+                print("RAW JSON RESPONSE:")
+                print(jsonString)
+            }
+            
+            let response = try JSONDecoder().decode(MoviesResponse.self, from: data)
+            movies = response.records
+        } catch {
+            print("ERROR: \(error)")
+            errorMessage = error.localizedDescription
+        }
+        
+        isLoading = false
+    }
+    
+    func fetchActors() async {
+        isLoading = true
+        
+        do {
+            let url = URL(string: "https://api.airtable.com/v0/appsfcB6YESLj4NCN/actors")!
+            let data = try await APIRequester.fetch(from: url, method: .get)
+            let response = try JSONDecoder().decode(ActorsResponse.self, from: data)
+            actors = response.records
         } catch {
             errorMessage = error.localizedDescription
         }
-
+        
         isLoading = false
     }
-    //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    func fetchMovies() async throws -> Movie {
-        let endpoint = "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
-        guard let url = URL(string: endpoint) else {
-            throw errors.invalidURL
-        }
-        
-        let(data, response) = try await URLSession.shared.data(from: url)
-        
-        guard let response = response as? HTTPURLResponse, response.statusCode == 200 else {
-            throw errors.invalidResponse
-        }
-        
-        do{
-            let decoder = JSONDecoder()
-            return try decoder.decode(Movie.self, from: data)
-        } catch {
-            throw errors.invalidData
-        }
-    }
     
-    enum errors: Error {
-        case invalidURL
-        case invalidResponse
-        case invalidData
+    func fetchDirectors() async {
+        isLoading = true
+        
+        do {
+            let url = URL(string: "https://api.airtable.com/v0/appsfcB6YESLj4NCN/directors")!
+            let data = try await APIRequester.fetch(from: url, method: .get)
+            let response = try JSONDecoder().decode(DirectorsResponse.self, from: data)
+            directors = response.records
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+        
+        isLoading = false
     }
 }

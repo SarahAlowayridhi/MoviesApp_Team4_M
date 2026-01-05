@@ -1,20 +1,36 @@
 //
-//  MoviesCenter.swift
-//  MoviesApp_Team4_M
+//  ContentView.swift
+//  MoviesClone
 //
-//  Created by Ghadeer Fallatah on 04/07/1447 AH.
+//  Created by Ghadeer Fallatah on 15/07/1447 AH.
 //
-
+//
 import SwiftUI
 
 struct MoviesCenter: View {
+    @StateObject private var moviesVm = MovieCenterVM()
+    
     var body: some View {
         ScrollView {
             VStack(spacing: 0) {
                 Search()
-                HighRatedMovie() // data will be retrieved
+                
+                if moviesVm.isLoading {
+                    ProgressView("Loading movies...")
+                        .padding()
+                } else if let error = moviesVm.errorMessage {
+                    Text("Error: \(error)")
+                        .foregroundColor(.red)
+                        .padding()
+                } else {
+                    HighRatedMovie(movies: moviesVm.movies)
+                }
+                
                 GenreSection()
             }
+        }
+        .task {
+            await moviesVm.fetchMovies()
         }
     }
 }
@@ -69,26 +85,64 @@ struct Search: View {
 }
 
 struct HighRatedMovie: View {
+    let movies: [MovieRecord]
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("High Rated")  //this is a dummy (place holder )I will make it dynamic later
+            Text("High Rated")
                 .font(.system(size: 24, weight: .bold))
                 .foregroundColor(.white)
                 .padding(.top, 24)
+            
+            Text("Movies count: \(movies.count)")
+                .foregroundColor(.white)
+                .font(.caption)
 
-            TabView {
-                ForEach(0..<5) { _ in
-                    Image("TopGunHR")  // same here place holders
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: 366, height: 434)
-                        .clipShape(RoundedRectangle(cornerRadius: 14))
+            if movies.isEmpty {
+                Text("No movies loaded")
+                    .foregroundColor(.gray)
+                    .frame(height: 460)
+            } else {
+                TabView {
+                    ForEach(movies) { movie in
+                        VStack {
+                            Text("Movie: \(movie.fields.name)")
+                                .foregroundColor(.white)
+                            Text("Poster URL: \(movie.fields.poster ?? "-")")
+                                .foregroundColor(.gray)
+                                .font(.caption)
+                            
+                            AsyncImage(url: URL(string: movie.fields.poster ?? "")) { phase in
+                                switch phase {
+                                case .empty:
+                                    ProgressView()
+                                        .frame(width: 366, height: 434)
+                                case .success(let image):
+                                    image
+                                        .resizable()
+                                        .scaledToFill()
+                                        .frame(width: 366, height: 434)
+                                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                                case .failure(let error):
+                                    VStack {
+                                        Text("Image failed to load")
+                                            .foregroundColor(.red)
+                                        Text(error.localizedDescription)
+                                            .foregroundColor(.gray)
+                                            .font(.caption)
+                                    }
+                                    .frame(width: 366, height: 434)
+                                @unknown default:
+                                    EmptyView()
+                                }
+                            }
+                        }
                         .padding(.bottom, 50)
-
+                    }
                 }
+                .frame(height: 460)
+                .tabViewStyle(PageTabViewStyle(indexDisplayMode: .automatic))
             }
-            .frame(height: 460)
-            .tabViewStyle(PageTabViewStyle(indexDisplayMode: .automatic))
         }
         .padding(.horizontal, 16)
     }
@@ -108,7 +162,7 @@ struct GenreSection: View {
                     
                     Text("Show more")
                         .font(.system(size: 14))
-                        .foregroundColor(Color.yellow1)
+                        .foregroundColor(Color.yellow)
                 }
                 
                 HStack(spacing: 16) {
@@ -137,7 +191,7 @@ struct GenreSection: View {
                     
                     Text("Show more")
                         .font(.system(size: 14))
-                        .foregroundColor(Color.yellow1)
+                        .foregroundColor(Color.yellow)
                 }
                 
                 HStack(spacing: 16) {
@@ -163,3 +217,4 @@ struct GenreSection: View {
 #Preview {
     MoviesCenter()
 }
+
