@@ -104,7 +104,7 @@ struct SignInView: View {
             }
             
             .navigationDestination(isPresented: $isLoggedIn) {
-                MoviesCenter()
+                FakeMovieCenter()
             }
             
             .onAppear {
