@@ -1,11 +1,9 @@
-
 //
 //  SavedMoviesViewModel.swift
 //  MoviesApp_Team4_M
 //
 //  Created by Sarah Alowayridhi on 15/07/1447 AH.
 //
-
 
 import Foundation
 import Combine
@@ -17,7 +15,11 @@ class SavedMoviesViewModel: ObservableObject {
 
     func getSavedMovies() {
 
-        guard let userId = UserDefaults.standard.string(forKey: "userId") else {
+        // ⭐️ sara change:
+        // توحيد مفتاح userId والتأكد أنه غير فاضي
+        guard let userId = UserDefaults.standard.string(forKey: "userId"),
+              !userId.isEmpty else {
+            self.savedMovies = []
             return
         }
 
@@ -29,7 +31,7 @@ class SavedMoviesViewModel: ObservableObject {
 
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        request.setValue("Bearer \(APItoken.APItoken)" , forHTTPHeaderField: "Authorization")
+        request.setValue("Bearer \(APItoken.APItoken)", forHTTPHeaderField: "Authorization")
 
         URLSession.shared.dataTask(with: request) { data, _, _ in
 
@@ -42,6 +44,8 @@ class SavedMoviesViewModel: ObservableObject {
             let decoded = try? JSONDecoder().decode(SavedMoviesResponse.self, from: data)
 
             DispatchQueue.main.async {
+                // ⭐️ sara change:
+                // فلترة الأفلام المحفوظة حسب userId الحالي
                 self.savedMovies = decoded?.records.filter {
                     $0.fields.user_id == userId
                 } ?? []

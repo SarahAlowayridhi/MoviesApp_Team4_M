@@ -7,7 +7,6 @@
 
 import SwiftUI
 
-
 struct AddReviewView: View {
 
     let movie_id: String
@@ -130,17 +129,27 @@ struct AddReviewView: View {
     private func submit() async {
         guard canSubmit else { return }
 
+        // ⭐️ sara change:
+        // نجيب userId للمستخدم الحالي ونمنع الإرسال إذا غير مسجّل
+        guard let userId = UserDefaults.standard.string(forKey: "userId"),
+              !userId.isEmpty else {
+            errorMessage = "You must be signed in to post a review."
+            return
+        }
+
         isSubmitting = true
         errorMessage = nil
         didPost = false
         defer { isSubmitting = false }
 
         do {
+            // ⭐️ sara change:
+            // ربط الريفيو بالمستخدم الحالي
             let payload = Airtable.ReviewCreateFields(
                 rate: Double(rate),
                 review_text: review_text.trimmed,
                 movie_id: movie_id,
-                user_id: nil
+                user_id: userId
             )
 
             try await Airtable.createReview(fields: payload)
@@ -160,7 +169,6 @@ private extension String {
     }
 }
 
-
 #Preview {
     NavigationStack {
         AddReviewView(
@@ -169,3 +177,4 @@ private extension String {
         )
     }
 }
+

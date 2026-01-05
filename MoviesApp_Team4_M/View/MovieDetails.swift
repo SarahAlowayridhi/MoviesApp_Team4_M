@@ -87,7 +87,11 @@ struct MovieDetails: View {
         .background(Color(.systemBackground).ignoresSafeArea())
         .preferredColorScheme(.dark)
         .toolbar(.hidden, for: .navigationBar)
+
+        // ⭐️ sara change:
+        // نخلي تحميل الداتا (الفيلم/الممثلين/المخرج/الريفيو) هنا فقط مرة وحدة
         .task(id: recordId) { await vm.load(recordId: recordId) }
+
         .sheet(isPresented: $vm.isShareSheetPresented) {
             ShareSheet(items: vm.shareItems)
                 .presentationDetents([.medium, .large])
@@ -153,6 +157,7 @@ struct MovieDetails: View {
                 }
 
                 circleIcon(system: vm.isSaved ? "bookmark.fill" : "bookmark") {
+                    // ⭐️ sara change: توحيد مفتاح userId (بدال user_id)
                     let userId = UserDefaults.standard.string(forKey: "userId") ?? ""
                     guard !userId.isEmpty else {
                         vm.errorMessage = "No user is signed in."
@@ -164,11 +169,10 @@ struct MovieDetails: View {
                 }
                 .opacity(vm.isSaving ? 0.6 : 1)
                 .disabled(vm.isSaving)
-                .task(id: recordId) {
-                    // keeping identical behavior (you had a second load here)
-                    await vm.load(recordId: recordId)
 
-                    // ⭐️ sara change: توحيد مفتاح userId
+                // ⭐️ sara change:
+                // هذي .task فقط لتحميل حالة الحفظ المحلية (بدون إعادة vm.load)
+                .task(id: recordId) {
                     let userId = UserDefaults.standard.string(forKey: "userId") ?? ""
                     if !userId.isEmpty {
                         vm.loadSavedLocalState(userId: userId, movieRecordId: recordId)
@@ -401,12 +405,10 @@ struct MovieDetails: View {
                 Spacer()
 
                 // ⭐️ sara change:
-                // زر حذف الريفيو (يظهر فقط إذا المستخدم مسجّل دخول)
+                // زر حذف الريفيو يظهر فقط إذا الريفيو للمستخدم الحالي (صاحب الريفيو)
                 if review.userId == currentUserId {
                     Button {
-                        Task {
-                            await vm.deleteReview(reviewId: review.id)
-                        }
+                        Task { await vm.deleteReview(reviewId: review.id) }
                     } label: {
                         Image(systemName: "trash")
                             .foregroundColor(.red)
@@ -430,8 +432,6 @@ struct MovieDetails: View {
         .background(.opacity(0.06))
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
-
-    
 
     private func starsRow(count: Int) -> some View {
         HStack(spacing: 1) {
@@ -481,7 +481,10 @@ struct MovieDetails: View {
 
 struct ReviewUI: Identifiable {
     let id: String
+
+    // ⭐️ sara change: لازم userId عشان نعرف صاحب الريفيو ونخليه يحذف ريفيوه فقط
     let userId: String?
+
     let userName: String
     let stars: Int
     let text: String
@@ -493,3 +496,4 @@ struct ReviewUI: Identifiable {
         MovieDetails(recordId: "recDqCgEPTo0zJKl8")
     }
 }
+

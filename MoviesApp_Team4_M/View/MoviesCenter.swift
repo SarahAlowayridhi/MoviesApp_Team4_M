@@ -90,6 +90,10 @@ struct Search: View {
             )
             .padding(.horizontal, 16)
         }
+        
+        .task {
+            await viewModel.getUser()
+                }
     }
 }
 
